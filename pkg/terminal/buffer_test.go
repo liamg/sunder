@@ -9,6 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func writeRaw(buf *Buffer, runes ...rune) {
+	for _, r := range runes {
+		buf.write(MeasuredRune{Rune: r, Width: 1})
+	}
+}
+
 func TestBufferCreation(t *testing.T) {
 	b := makeBufferForTesting(10, 20)
 	assert.Equal(t, uint16(10), b.Width())
@@ -20,18 +26,18 @@ func TestBufferCreation(t *testing.T) {
 
 func TestTabbing(t *testing.T) {
 	b := makeBufferForTesting(30, 3)
-	b.write([]rune("hello")...)
+	writeRaw(b, []rune("hello")...)
 	b.tab()
-	b.write([]rune("x")...)
+	writeRaw(b, []rune("x")...)
 	b.tab()
-	b.write([]rune("goodbye")...)
+	writeRaw(b, []rune("goodbye")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hell")...)
+	writeRaw(b, []rune("hell")...)
 	b.tab()
-	b.write([]rune("xxx")...)
+	writeRaw(b, []rune("xxx")...)
 	b.tab()
-	b.write([]rune("good")...)
+	writeRaw(b, []rune("good")...)
 	b.carriageReturn()
 	b.newLine()
 	expected := `
@@ -49,19 +55,19 @@ hell    xxx good
 
 func TestOffsets(t *testing.T) {
 	b := makeBufferForTesting(10, 3)
-	b.write([]rune("hello")...)
+	writeRaw(b, []rune("hello")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello")...)
+	writeRaw(b, []rune("hello")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello")...)
+	writeRaw(b, []rune("hello")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello")...)
+	writeRaw(b, []rune("hello")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello")...)
+	writeRaw(b, []rune("hello")...)
 	assert.Equal(t, uint16(10), b.ViewWidth())
 	assert.Equal(t, uint16(10), b.Width())
 	assert.Equal(t, uint16(3), b.ViewHeight())
@@ -80,31 +86,31 @@ func TestBufferWriteIncrementsCursorCorrectly(t *testing.T) {
 	 |-----
 	*/
 
-	b.write('x')
+	writeRaw(b, 'x')
 	require.Equal(t, uint16(1), b.CursorColumn())
 	require.Equal(t, uint16(0), b.CursorLine())
 
-	b.write('x')
+	writeRaw(b, 'x')
 	require.Equal(t, uint16(2), b.CursorColumn())
 	require.Equal(t, uint16(0), b.CursorLine())
 
-	b.write('x')
+	writeRaw(b, 'x')
 	require.Equal(t, uint16(3), b.CursorColumn())
 	require.Equal(t, uint16(0), b.CursorLine())
 
-	b.write('x')
+	writeRaw(b, 'x')
 	require.Equal(t, uint16(4), b.CursorColumn())
 	require.Equal(t, uint16(0), b.CursorLine())
 
-	b.write('x')
+	writeRaw(b, 'x')
 	require.Equal(t, uint16(5), b.CursorColumn())
 	require.Equal(t, uint16(0), b.CursorLine())
 
-	b.write('x')
+	writeRaw(b, 'x')
 	require.Equal(t, uint16(1), b.CursorColumn())
 	require.Equal(t, uint16(1), b.CursorLine())
 
-	b.write('x')
+	writeRaw(b, 'x')
 	require.Equal(t, uint16(2), b.CursorColumn())
 	require.Equal(t, uint16(1), b.CursorLine())
 
@@ -119,14 +125,14 @@ func TestWritingNewLineAsFirstRuneOnWrappedLine(t *testing.T) {
 	b := makeBufferForTesting(3, 20)
 	b.modes.LineFeedMode = false
 
-	b.write('a', 'b', 'c')
+	writeRaw(b, 'a', 'b', 'c')
 	assert.Equal(t, uint16(3), b.cursorX)
 	assert.Equal(t, uint16(0), b.cursorY)
 	b.newLine()
 	assert.Equal(t, uint16(0), b.cursorX)
 	assert.Equal(t, uint16(1), b.cursorY)
 
-	b.write('d', 'e', 'f')
+	writeRaw(b, 'd', 'e', 'f')
 	assert.Equal(t, uint16(3), b.cursorX)
 	assert.Equal(t, uint16(1), b.cursorY)
 	b.newLine()
@@ -152,13 +158,13 @@ func TestWritingNewLineAsSecondRuneOnWrappedLine(t *testing.T) {
 		|z
 	*/
 
-	b.write('a', 'b', 'c', 'd')
+	writeRaw(b, 'a', 'b', 'c', 'd')
 	b.newLine()
-	b.write('e', 'f')
+	writeRaw(b, 'e', 'f')
 	b.newLine()
 	b.newLine()
 	b.newLine()
-	b.write('z')
+	writeRaw(b, 'z')
 
 	assert.Equal(t, "abc", b.lines[0].String())
 	assert.Equal(t, "d", b.lines[1].String())
@@ -216,46 +222,46 @@ func TestMovePosition(t *testing.T) {
 
 func TestVisibleLines(t *testing.T) {
 	b := makeBufferForTesting(80, 10)
-	b.write([]rune("hello 1")...)
+	writeRaw(b, []rune("hello 1")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 2")...)
+	writeRaw(b, []rune("hello 2")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 3")...)
+	writeRaw(b, []rune("hello 3")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 4")...)
+	writeRaw(b, []rune("hello 4")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 5")...)
+	writeRaw(b, []rune("hello 5")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 6")...)
+	writeRaw(b, []rune("hello 6")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 7")...)
+	writeRaw(b, []rune("hello 7")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 8")...)
+	writeRaw(b, []rune("hello 8")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 9")...)
+	writeRaw(b, []rune("hello 9")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 10")...)
+	writeRaw(b, []rune("hello 10")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 11")...)
+	writeRaw(b, []rune("hello 11")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 12")...)
+	writeRaw(b, []rune("hello 12")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 13")...)
+	writeRaw(b, []rune("hello 13")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 14")...)
+	writeRaw(b, []rune("hello 14")...)
 
 	lines := b.GetVisibleLines()
 	require.Equal(t, 10, len(lines))
@@ -266,13 +272,13 @@ func TestVisibleLines(t *testing.T) {
 
 func TestClearWithoutFullView(t *testing.T) {
 	b := makeBufferForTesting(80, 10)
-	b.write([]rune("hello 1")...)
+	writeRaw(b, []rune("hello 1")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 1")...)
+	writeRaw(b, []rune("hello 1")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 1")...)
+	writeRaw(b, []rune("hello 1")...)
 	b.clear()
 	lines := b.GetVisibleLines()
 	for _, line := range lines {
@@ -282,28 +288,28 @@ func TestClearWithoutFullView(t *testing.T) {
 
 func TestClearWithFullView(t *testing.T) {
 	b := makeBufferForTesting(80, 5)
-	b.write([]rune("hello 1")...)
+	writeRaw(b, []rune("hello 1")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 1")...)
+	writeRaw(b, []rune("hello 1")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 1")...)
+	writeRaw(b, []rune("hello 1")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 1")...)
+	writeRaw(b, []rune("hello 1")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 1")...)
+	writeRaw(b, []rune("hello 1")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 1")...)
+	writeRaw(b, []rune("hello 1")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 1")...)
+	writeRaw(b, []rune("hello 1")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("hello 1")...)
+	writeRaw(b, []rune("hello 1")...)
 	b.clear()
 	lines := b.GetVisibleLines()
 	for _, line := range lines {
@@ -313,18 +319,18 @@ func TestClearWithFullView(t *testing.T) {
 
 func TestCarriageReturn(t *testing.T) {
 	b := makeBufferForTesting(80, 20)
-	b.write([]rune("hello!")...)
+	writeRaw(b, []rune("hello!")...)
 	b.carriageReturn()
-	b.write([]rune("secret")...)
+	writeRaw(b, []rune("secret")...)
 	lines := b.GetVisibleLines()
 	assert.Equal(t, "secret", lines[0].String())
 }
 
 func TestCarriageReturnOnFullLine(t *testing.T) {
 	b := makeBufferForTesting(20, 20)
-	b.write([]rune("abcdeabcdeabcdeabcde")...)
+	writeRaw(b, []rune("abcdeabcdeabcdeabcde")...)
 	b.carriageReturn()
-	b.write([]rune("xxxxxxxxxxxxxxxxxxxx")...)
+	writeRaw(b, []rune("xxxxxxxxxxxxxxxxxxxx")...)
 	lines := b.GetVisibleLines()
 	assert.Equal(t, "xxxxxxxxxxxxxxxxxxxx", lines[0].String())
 }
@@ -332,9 +338,9 @@ func TestCarriageReturnOnFullLine(t *testing.T) {
 func TestCarriageReturnOnFullLastLine(t *testing.T) {
 	b := makeBufferForTesting(20, 2)
 	b.newLine()
-	b.write([]rune("abcdeabcdeabcdeabcde")...)
+	writeRaw(b, []rune("abcdeabcdeabcdeabcde")...)
 	b.carriageReturn()
-	b.write([]rune("xxxxxxxxxxxxxxxxxxxx")...)
+	writeRaw(b, []rune("xxxxxxxxxxxxxxxxxxxx")...)
 	lines := b.GetVisibleLines()
 	assert.Equal(t, "", lines[0].String())
 	assert.Equal(t, "xxxxxxxxxxxxxxxxxxxx", lines[1].String())
@@ -342,9 +348,9 @@ func TestCarriageReturnOnFullLastLine(t *testing.T) {
 
 func TestCarriageReturnOnWrappedLine(t *testing.T) {
 	b := makeBufferForTesting(80, 6)
-	b.write([]rune("hello!")...)
+	writeRaw(b, []rune("hello!")...)
 	b.carriageReturn()
-	b.write([]rune("secret")...)
+	writeRaw(b, []rune("secret")...)
 
 	lines := b.GetVisibleLines()
 	assert.Equal(t, "secret", lines[0].String())
@@ -360,41 +366,41 @@ func TestCarriageReturnOnLineThatDoesntExist(t *testing.T) {
 
 func TestGetCell(t *testing.T) {
 	b := makeBufferForTesting(80, 20)
-	b.write([]rune("Hello")...)
+	writeRaw(b, []rune("Hello")...)
 	b.carriageReturn()
 	b.newLine()
 
-	b.write([]rune("there")...)
+	writeRaw(b, []rune("there")...)
 	b.carriageReturn()
 	b.newLine()
 
-	b.write([]rune("something...")...)
+	writeRaw(b, []rune("something...")...)
 	cell := b.GetCell(8, 2)
 	require.NotNil(t, cell)
-	assert.Equal(t, 'g', cell.Rune())
+	assert.Equal(t, 'g', cell.Rune().Rune)
 }
 
 func TestGetCellWithHistory(t *testing.T) {
 	b := makeBufferForTesting(80, 2)
 
-	b.write([]rune("Hello")...)
+	writeRaw(b, []rune("Hello")...)
 	b.carriageReturn()
 	b.newLine()
 
-	b.write([]rune("there")...)
+	writeRaw(b, []rune("there")...)
 	b.carriageReturn()
 	b.newLine()
 
-	b.write([]rune("something...")...)
+	writeRaw(b, []rune("something...")...)
 
 	cell := b.GetCell(8, 1)
 	require.NotNil(t, cell)
-	assert.Equal(t, 'g', cell.Rune())
+	assert.Equal(t, 'g', cell.Rune().Rune)
 }
 
 func TestGetCellWithBadCursor(t *testing.T) {
 	b := makeBufferForTesting(80, 2)
-	b.write([]rune("Hello\r\nthere\r\nsomething...")...)
+	writeRaw(b, []rune("Hello\r\nthere\r\nsomething...")...)
 	require.Nil(t, b.GetCell(8, 3))
 	require.Nil(t, b.GetCell(90, 0))
 
@@ -410,34 +416,34 @@ func TestCursorPositionQuerying(t *testing.T) {
 
 func TestRawPositionQuerying(t *testing.T) {
 	b := makeBufferForTesting(80, 5)
-	b.write([]rune("a")...)
+	writeRaw(b, []rune("a")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("a")...)
+	writeRaw(b, []rune("a")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("a")...)
+	writeRaw(b, []rune("a")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("a")...)
+	writeRaw(b, []rune("a")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("a")...)
+	writeRaw(b, []rune("a")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("a")...)
+	writeRaw(b, []rune("a")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("a")...)
+	writeRaw(b, []rune("a")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("a")...)
+	writeRaw(b, []rune("a")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("a")...)
+	writeRaw(b, []rune("a")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("a")...)
+	writeRaw(b, []rune("a")...)
 
 	b.cursorX = 3
 	b.cursorY = 4
@@ -447,10 +453,10 @@ func TestRawPositionQuerying(t *testing.T) {
 // CSI 2 K
 func TestEraseLine(t *testing.T) {
 	b := makeBufferForTesting(80, 5)
-	b.write([]rune("hello, this is a test")...)
+	writeRaw(b, []rune("hello, this is a test")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("this line should be deleted")...)
+	writeRaw(b, []rune("this line should be deleted")...)
 	b.eraseLine()
 	assert.Equal(t, "hello, this is a test", b.lines[0].String())
 	assert.Equal(t, "", b.lines[1].String())
@@ -459,10 +465,10 @@ func TestEraseLine(t *testing.T) {
 // CSI 1 K
 func TestEraseLineToCursor(t *testing.T) {
 	b := makeBufferForTesting(80, 5)
-	b.write([]rune("hello, this is a test")...)
+	writeRaw(b, []rune("hello, this is a test")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("deleted")...)
+	writeRaw(b, []rune("deleted")...)
 
 	b.movePosition(-3, 0)
 	b.eraseLineToCursor()
@@ -473,10 +479,10 @@ func TestEraseLineToCursor(t *testing.T) {
 // CSI 0 K
 func TestEraseLineAfterCursor(t *testing.T) {
 	b := makeBufferForTesting(80, 5)
-	b.write([]rune("hello, this is a test")...)
+	writeRaw(b, []rune("hello, this is a test")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("deleted")...)
+	writeRaw(b, []rune("deleted")...)
 	b.movePosition(-3, 0)
 	b.eraseLineFromCursor()
 	assert.Equal(t, "hello, this is a test", b.lines[0].String())
@@ -484,13 +490,13 @@ func TestEraseLineAfterCursor(t *testing.T) {
 }
 func TestEraseDisplay(t *testing.T) {
 	b := makeBufferForTesting(80, 5)
-	b.write([]rune("hello")...)
+	writeRaw(b, []rune("hello")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("asdasd")...)
+	writeRaw(b, []rune("asdasd")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("thing")...)
+	writeRaw(b, []rune("thing")...)
 	b.movePosition(2, 1)
 	b.eraseDisplay()
 	lines := b.GetVisibleLines()
@@ -500,13 +506,13 @@ func TestEraseDisplay(t *testing.T) {
 }
 func TestEraseDisplayToCursor(t *testing.T) {
 	b := makeBufferForTesting(80, 5)
-	b.write([]rune("hello")...)
+	writeRaw(b, []rune("hello")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("asdasd")...)
+	writeRaw(b, []rune("asdasd")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("thing")...)
+	writeRaw(b, []rune("thing")...)
 	b.movePosition(-2, 0)
 	b.eraseDisplayToCursor()
 	lines := b.GetVisibleLines()
@@ -518,13 +524,13 @@ func TestEraseDisplayToCursor(t *testing.T) {
 
 func TestEraseDisplayFromCursor(t *testing.T) {
 	b := makeBufferForTesting(80, 5)
-	b.write([]rune("hello")...)
+	writeRaw(b, []rune("hello")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("asdasd")...)
+	writeRaw(b, []rune("asdasd")...)
 	b.carriageReturn()
 	b.newLine()
-	b.write([]rune("things")...)
+	writeRaw(b, []rune("things")...)
 	b.movePosition(-3, -1)
 	b.eraseDisplayFromCursor()
 	lines := b.GetVisibleLines()
@@ -534,10 +540,10 @@ func TestEraseDisplayFromCursor(t *testing.T) {
 }
 func TestBackspace(t *testing.T) {
 	b := makeBufferForTesting(80, 5)
-	b.write([]rune("hello")...)
+	writeRaw(b, []rune("hello")...)
 	b.backspace()
 	b.backspace()
-	b.write([]rune("p")...)
+	writeRaw(b, []rune("p")...)
 	lines := b.GetVisibleLines()
 	assert.Equal(t, "helpo", lines[0].String())
 }
@@ -546,12 +552,12 @@ func TestHorizontalResizeView(t *testing.T) {
 	b := makeBufferForTesting(80, 10)
 
 	// 60 characters
-	b.write([]rune(`hellohellohellohellohellohellohellohellohellohellohellohello`)...)
+	writeRaw(b, []rune(`hellohellohellohellohellohellohellohellohellohellohellohello`)...)
 
 	b.carriageReturn()
 	b.newLine()
 
-	b.write([]rune(`goodbyegoodbye`)...)
+	writeRaw(b, []rune(`goodbyegoodbye`)...)
 
 	require.Equal(t, uint16(14), b.cursorX)
 	require.Equal(t, uint16(1), b.cursorY)
@@ -624,11 +630,11 @@ func TestBufferMaxLines(t *testing.T) {
 	b := NewBuffer(80, 2, 2)
 	b.modes.LineFeedMode = false
 
-	b.write([]rune("hello")...)
+	writeRaw(b, []rune("hello")...)
 	b.newLine()
-	b.write([]rune("funny")...)
+	writeRaw(b, []rune("funny")...)
 	b.newLine()
-	b.write([]rune("world")...)
+	writeRaw(b, []rune("world")...)
 
 	assert.Equal(t, 2, len(b.lines))
 	assert.Equal(t, "funny", b.lines[0].String())

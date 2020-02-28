@@ -263,7 +263,7 @@ func (t *Terminal) csiCursorCharacterAbsoluteHandler(params []string) (renderReq
 
 func parseCursorPosition(params []string) (x, y int) {
 	x, y = 1, 1
-	if len(params) == 2 {
+	if len(params) >= 1 {
 		var err error
 		if params[0] != "" {
 			y, err = strconv.Atoi(string(params[0]))
@@ -271,8 +271,10 @@ func parseCursorPosition(params []string) (x, y int) {
 				y = 1
 			}
 		}
+	}
+	if len(params) == 2 {
 		if params[1] != "" {
-			x, err = strconv.Atoi(string(params[1]))
+			x, err := strconv.Atoi(string(params[1]))
 			if err != nil || x < 1 {
 				x = 1
 			}
@@ -662,7 +664,7 @@ func (t *Terminal) csiTabClearHandler(params []string) (renderRequired bool) {
 	case "0", "":
 		t.activeBuffer.tabClearAtCursor()
 	case "3":
-		t.activeBuffer.tabZonk()
+		t.activeBuffer.tabReset()
 	default:
 		return false
 	}

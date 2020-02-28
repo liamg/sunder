@@ -1,6 +1,8 @@
-package multiplexer
+package pane
 
 import (
+	"sync"
+
 	"github.com/google/uuid"
 	"github.com/liamg/sunder/pkg/terminal"
 )
@@ -9,26 +11,36 @@ type Pane struct {
 	id         uuid.UUID
 	terminal   *terminal.Terminal
 	childPanes []*Pane
-	pos        PanePosition
+	pos        Position
 	renderChan chan struct{}
 	updateChan chan<- *Pane
 	exists     bool
 	closeChan  chan struct{}
+	closeOnce  sync.Once
 }
 
-func NewPane(pos PanePosition, updateChan chan<- *Pane, term *terminal.Terminal) *Pane {
+func NewPane(pos Position, updateChan chan<- *Pane, term *terminal.Terminal) *Pane {
 	return &Pane{
 		id:         uuid.New(),
 		pos:        pos,
 		terminal:   term,
 		updateChan: updateChan,
 		closeChan:  make(chan struct{}),
+		exists:     true,
 	}
 }
 
-func (p *Pane) Start() error {
+func (p *Pane) GetPosition() Position {
+	return p.pos
+}
 
-	updateChan := make(chan struct{})
+func (p *Pane) GetTerminal() *terminal.Terminal {
+	return p.terminal
+}
+
+func (p *Pane) Start(parentRows, parentCols uint16) error {
+
+	updateChan := make(chan struct{}, 1)
 
 	go func() {
 		for {
@@ -42,19 +54,27 @@ func (p *Pane) Start() error {
 		}
 	}()
 
-	if err := p.terminal.Run(updateChan, p.pos.Size.Y, p.pos.Size.X); err != nil {
+	fixedSize := p.pos.Size.ToFixed(parentRows, parentCols)
+	if err := p.terminal.Run(updateChan, fixedSize.Y, fixedSize.X); err != nil {
 		return err
 	}
-	p.close()
+	p.requestRender()
+	p.Close()
 	return nil
 }
 
 func (p *Pane) Exists() bool {
+	if p == nil {
+		return false
+	}
 	return p.exists
 }
 
-func (p *Pane) close() {
-	p.exists = false
+func (p *Pane) Close() {
+	p.closeOnce.Do(func() {
+		close(p.closeChan)
+		p.exists = false
+	})
 }
 
 func (p *Pane) requestRender() {
@@ -83,8 +103,10 @@ func (p *Pane) Resize(parentRows uint16, parentCols uint16) error {
 
 	fixed := p.pos.Size.ToFixed(parentRows, parentCols)
 
-	if err := p.terminal.SetSize(fixed.Y, fixed.X); err != nil {
-		return err
+	if p.terminal.Pty() != nil {
+		if err := p.terminal.SetSize(fixed.Y, fixed.X); err != nil {
+			return err
+		}
 	}
 
 	return nil

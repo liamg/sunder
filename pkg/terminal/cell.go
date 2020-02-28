@@ -1,26 +1,15 @@
 package terminal
 
 type Cell struct {
-	r    rune
+	r    MeasuredRune
 	attr CellAttributes
-}
-
-type CellAttributes struct {
-	fgColour  Colour
-	bgColour  Colour
-	bold      bool
-	dim       bool
-	underline bool
-	blink     bool
-	inverse   bool
-	hidden    bool
 }
 
 func (cell *Cell) Attr() CellAttributes {
 	return cell.attr
 }
 
-func (cell *Cell) Rune() rune {
+func (cell *Cell) Rune() MeasuredRune {
 	return cell.r
 }
 
@@ -39,16 +28,10 @@ func (cell *Cell) Bg() Colour {
 }
 
 func (cell *Cell) erase(bgColour Colour) {
-	cell.setRune(0)
+	cell.setRune(MeasuredRune{Rune: 0})
 	cell.attr.bgColour = bgColour
 }
 
-func (cell *Cell) setRune(r rune) {
+func (cell *Cell) setRune(r MeasuredRune) {
 	cell.r = r
-}
-
-func (cellAttr *CellAttributes) ReverseVideo() {
-	oldFgColour := cellAttr.fgColour
-	cellAttr.fgColour = cellAttr.bgColour
-	cellAttr.bgColour = oldFgColour
 }

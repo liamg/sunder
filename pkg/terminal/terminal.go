@@ -161,11 +161,11 @@ func (t *Terminal) processRunes(runes ...MeasuredRune) (renderRequired bool) {
 
 	for _, r := range runes {
 		switch r.Rune {
-		//case 0x05: //enq
-		//	continue
-		//case 0x07: //bell
-		// TODO ring bell/proxy?
-		//	continue
+		case 0x05: //enq
+			continue
+		case 0x07: //bell
+			//TODO handle this properly
+			continue
 		case 0x08: //backspace
 			t.GetActiveBuffer().backspace()
 			renderRequired = true
@@ -179,12 +179,12 @@ func (t *Terminal) processRunes(runes ...MeasuredRune) (renderRequired bool) {
 			t.GetActiveBuffer().carriageReturn()
 			renderRequired = true
 		case 0x0e: //shiftOut
-			t.GetActiveBuffer().CurrentCharset = 1
+			t.GetActiveBuffer().currentCharset = 1
 		case 0x0f: //shiftIn
-			t.GetActiveBuffer().CurrentCharset = 0
+			t.GetActiveBuffer().currentCharset = 0
 		default:
 			//terminal.logger.Debugf("Received character 0x%X: %q", b, string(b))
-			t.GetActiveBuffer().write(t.translateRune(r.Rune))
+			t.GetActiveBuffer().write(t.translateRune(r))
 			renderRequired = true
 		}
 	}
@@ -192,14 +192,14 @@ func (t *Terminal) processRunes(runes ...MeasuredRune) (renderRequired bool) {
 	return renderRequired
 }
 
-func (t *Terminal) translateRune(b rune) rune {
-	table := t.GetActiveBuffer().Charsets[t.GetActiveBuffer().CurrentCharset]
+func (t *Terminal) translateRune(b MeasuredRune) MeasuredRune {
+	table := t.GetActiveBuffer().charsets[t.GetActiveBuffer().currentCharset]
 	if table == nil {
 		return b
 	}
-	chr, ok := (*table)[b]
+	chr, ok := (*table)[b.Rune]
 	if ok {
-		return chr
+		return MeasuredRune{Rune: chr, Width: 1}
 	}
 	return b
 }

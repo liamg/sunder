@@ -8,28 +8,32 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/liamg/sunder/pkg/pane"
+
 	"github.com/creack/pty"
-	mpterm "github.com/liamg/sunder/pkg/terminal"
+	sunderterm "github.com/liamg/sunder/pkg/terminal"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
 type Multiplexer struct {
 	// all top level panes
-	panes []*Pane
+	panes []*pane.Pane
 	// pane which the user has selected
-	activePane *Pane
+	activePane *pane.Pane
 	// write to this to get stdout on the parent terminal
 	output chan byte
 	// panes write to this channel to request to be rendered by the multiplexer
-	updateChan <-chan *Pane
+	updateChan <-chan *pane.Pane
 	closeChan  chan struct{}
 	closeOnce  sync.Once
+	rows       uint16
+	cols       uint16
 }
 
 func New() *Multiplexer {
-	update := make(chan *Pane, 0xff)
+	update := make(chan *pane.Pane, 0xff)
 	mp := &Multiplexer{
-		panes:      []*Pane{NewPane(NewFullscreenPosition(), update, mpterm.New())},
+		panes:      []*pane.Pane{pane.NewPane(pane.NewFullscreenPosition(), update, sunderterm.New())},
 		output:     make(chan byte, 0xffff),
 		updateChan: update,
 		closeChan:  make(chan struct{}),
@@ -44,6 +48,12 @@ func (m *Multiplexer) writeToStdOut(data []byte) {
 }
 
 func (m *Multiplexer) Start() error {
+
+	// TODO for debugging, remove later
+	_ = os.Setenv("SUNDER", "1")
+
+	// RIS
+	m.writeToStdOut([]byte{0x1b, 'c'})
 
 	// default the active pane
 	m.activePane = m.panes[0]
@@ -76,24 +86,39 @@ func (m *Multiplexer) Start() error {
 	}
 	defer func() { _ = terminal.Restore(int(os.Stdin.Fd()), oldState) }() // Best effort restore.
 
+	size, err := pty.GetsizeFull(os.Stdin)
+	if err != nil {
+		return err
+	}
+
+	// kick off all paned terminals
+	for _, p := range m.panes {
+		func(p *pane.Pane) {
+			go func() { _ = p.Start(size.Rows, size.Cols) }()
+		}(p)
+	}
+
+	// tidy up any hanging terminals on exit
+	defer func() {
+		for _, p := range m.panes {
+			p.Close()
+		}
+	}()
+
 	// Copy stdin to the multiplexer and the multiplexer output to stdout.
 	go func() { _, _ = io.Copy(m, os.Stdin) }()
 	go func() {
-
-		// create render loop here ?
 		for {
 			select {
-			case pane := <-m.updateChan:
-				m.render(pane)
+			case p := <-m.updateChan:
+				m.render(p)
 			case <-m.closeChan:
 				return
 			}
-
 		}
-
 	}()
-	_, _ = io.Copy(os.Stdout, m)
-	return nil
+	_, err = io.Copy(os.Stdout, m)
+	return err
 
 }
 
@@ -106,40 +131,18 @@ func (m *Multiplexer) Close() {
 	})
 }
 
-func (m *Multiplexer) render(pane *Pane) {
-	if !pane.Exists() {
-		// TODO remove pane and resize all children
-		return
-	}
-
-	// TODO render all pane specific output
-
+func (m *Multiplexer) moveCursor(x, y uint16) {
+	m.writeToStdOut([]byte(fmt.Sprintf("\x1b[%d;%dH", y+1, x+1))) // 1-indexed
 }
 
 func (m *Multiplexer) resize(rows uint16, cols uint16) error {
 	// resize root pane
-	for _, pane := range m.panes {
-		if err := pane.Resize(rows, cols); err != nil {
+	for _, p := range m.panes {
+		if err := p.Resize(rows, cols); err != nil {
 			return err
 		}
 	}
+	m.cols = cols
+	m.rows = rows
 	return nil
-}
-
-// Process StdIn and send it on to the active pane's process
-func (m *Multiplexer) Write(data []byte) (n int, err error) {
-	return len(data), m.activePane.ProcessStdIn(data)
-}
-
-// Read reads data from the multiplexer into stdout for the parent terminal to process/render
-func (m *Multiplexer) Read(data []byte) (n int, err error) {
-	for i := 0; i < cap(data); i++ {
-		select {
-		case b := <-m.output:
-			data[i] = b
-		default:
-			return i, nil
-		}
-	}
-	return 0, fmt.Errorf("buffer has no capacity")
 }

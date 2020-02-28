@@ -20,7 +20,7 @@ func newLine() Line {
 
 func (line *Line) reverseVideo() {
 	for i, _ := range line.cells {
-		line.cells[i].attr.ReverseVideo()
+		line.cells[i].attr.reverseVideo()
 	}
 }
 
@@ -28,7 +28,7 @@ func (line *Line) reverseVideo() {
 func (line *Line) cleanse() {
 	cut := 0
 	for i := len(line.cells) - 1; i >= 0; i-- {
-		if line.cells[i].r != 0 {
+		if line.cells[i].r.Rune != 0 {
 			break
 		}
 		cut++
@@ -50,7 +50,7 @@ func (line *Line) setNoBreak(nobreak bool) {
 func (line *Line) String() string {
 	runes := []rune{}
 	for _, cell := range line.cells {
-		runes = append(runes, cell.r)
+		runes = append(runes, cell.r.Rune)
 	}
 	return strings.TrimRight(string(runes), "\x00 ")
 }

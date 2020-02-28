@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+const TabSize = 8
+
 type Buffer struct {
 	lines                 []Line
 	savedX                uint16
@@ -23,9 +25,9 @@ type Buffer struct {
 	cursorAttr            CellAttributes
 	scrollLinesFromBottom uint
 	maxLines              uint64
-	tabStops              map[uint16]struct{}
-	Charsets              []*map[rune]rune // array of 2 charsets, nil means ASCII (no conversion)
-	CurrentCharset        int              // active charset index in Charsets array, valid values are 0 or 1
+	tabStops              []uint16
+	charsets              []*map[rune]rune // array of 2 charsets, nil means ASCII (no conversion)
+	currentCharset        int              // active charset index in charsets array, valid values are 0 or 1
 	modes                 Modes
 	mouseMode             MouseMode
 	mouseExtMode          MouseExtMode
@@ -57,14 +59,13 @@ func NewBuffer(width, height uint16, maxLines uint64) *Buffer {
 		maxLines:     maxLines,
 		topMargin:    0,
 		bottomMargin: uint(height - 1),
-		Charsets:     []*map[rune]rune{nil, nil},
+		charsets:     []*map[rune]rune{nil, nil},
 		modes: Modes{
 			LineFeedMode: true,
 			AutoWrap:     true,
 			ShowCursor:   true,
 		},
 	}
-	b.tabReset()
 	return b
 }
 
@@ -121,9 +122,9 @@ func (buffer *Buffer) saveCursor() {
 	buffer.savedCursorAttr = &copiedAttr
 	buffer.savedX = buffer.cursorX
 	buffer.savedY = buffer.cursorY
-	buffer.savedCharsets = make([]*map[rune]rune, len(buffer.Charsets))
-	copy(buffer.savedCharsets, buffer.Charsets)
-	buffer.savedCurrentCharset = buffer.CurrentCharset
+	buffer.savedCharsets = make([]*map[rune]rune, len(buffer.charsets))
+	copy(buffer.savedCharsets, buffer.charsets)
+	buffer.savedCurrentCharset = buffer.currentCharset
 }
 
 func (buffer *Buffer) restoreCursor() {
@@ -134,9 +135,9 @@ func (buffer *Buffer) restoreCursor() {
 	buffer.cursorX = buffer.savedX
 	buffer.cursorY = buffer.savedY
 	if buffer.savedCharsets != nil {
-		buffer.Charsets = make([]*map[rune]rune, len(buffer.savedCharsets))
-		copy(buffer.Charsets, buffer.savedCharsets)
-		buffer.CurrentCharset = buffer.savedCurrentCharset
+		buffer.charsets = make([]*map[rune]rune, len(buffer.savedCharsets))
+		copy(buffer.charsets, buffer.savedCharsets)
+		buffer.currentCharset = buffer.savedCurrentCharset
 	}
 }
 
@@ -362,7 +363,7 @@ func (buffer *Buffer) reverseIndex() {
 }
 
 // write will write a rune to the terminal at the position of the cursor, and increment the cursor position
-func (buffer *Buffer) write(runes ...rune) {
+func (buffer *Buffer) write(runes ...MeasuredRune) {
 
 	// scroll to bottom on input
 	buffer.scrollLinesFromBottom = 0
@@ -473,12 +474,35 @@ func (buffer *Buffer) carriageReturn() {
 }
 
 func (buffer *Buffer) tab() {
-	for buffer.cursorX < buffer.viewWidth-1 { // @todo rightMargin
-		buffer.write(' ')
-		if buffer.IsTabSetAtCursor() {
-			break
+
+	tabStop := buffer.getNextTabStopAfter(buffer.cursorX)
+	for buffer.cursorX < tabStop && buffer.cursorX < buffer.viewWidth-1 { // @todo rightMargin
+		buffer.write(MeasuredRune{Rune: ' ', Width: 1})
+	}
+}
+
+// return next tab stop x pos
+func (buffer *Buffer) getNextTabStopAfter(col uint16) uint16 {
+
+	defaultStop := col + (TabSize - (col % TabSize))
+	if defaultStop == col {
+		defaultStop += TabSize
+	}
+
+	var low uint16
+	for _, stop := range buffer.tabStops {
+		if stop > col {
+			if stop < low || low == 0 {
+				low = stop
+			}
 		}
 	}
+
+	if low == 0 || low > defaultStop {
+		return defaultStop
+	}
+
+	return low
 }
 
 func (buffer *Buffer) newLine() {
@@ -870,49 +894,42 @@ func (buffer *Buffer) IsNewLineMode() bool {
 	return buffer.modes.LineFeedMode == false
 }
 
-func (buffer *Buffer) tabZonk() {
-	buffer.tabStops = make(map[uint16]struct{})
+func (buffer *Buffer) tabReset() {
+	buffer.tabStops = nil
 }
 
 func (buffer *Buffer) tabSet(index uint16) {
-	buffer.tabStops[index] = struct{}{}
+	buffer.tabStops = append(buffer.tabStops, index)
 }
 
 func (buffer *Buffer) tabClear(index uint16) {
-	delete(buffer.tabStops, index)
-}
-
-func (buffer *Buffer) getTabIndexFromCursor() uint16 {
-	index := buffer.cursorX
-	if index == buffer.viewWidth {
-		index = 0
+	var filtered []uint16
+	for _, stop := range buffer.tabStops {
+		if stop != buffer.cursorX {
+			filtered = append(filtered, stop)
+		}
 	}
-	return index
+	buffer.tabStops = filtered
 }
 
 func (buffer *Buffer) IsTabSetAtCursor() bool {
-	index := buffer.getTabIndexFromCursor()
-	_, ok := buffer.tabStops[index]
-	return ok
+	if buffer.cursorX%TabSize > 0 {
+		return false
+	}
+	for _, stop := range buffer.tabStops {
+		if stop == buffer.cursorX {
+			return true
+		}
+	}
+	return false
 }
 
 func (buffer *Buffer) tabClearAtCursor() {
-	buffer.tabClear(buffer.getTabIndexFromCursor())
+	buffer.tabClear(buffer.cursorX)
 }
 
 func (buffer *Buffer) tabSetAtCursor() {
-	buffer.tabSet(buffer.getTabIndexFromCursor())
-}
-
-func (buffer *Buffer) tabReset() {
-	buffer.tabZonk()
-	const MaxTabs uint16 = 1024
-	const TabStep = 4
-	var i uint16
-	for i < MaxTabs {
-		buffer.tabSet(i)
-		i += TabStep
-	}
+	buffer.tabSet(buffer.cursorX)
 }
 
 func (buffer *Buffer) GetScrollOffset() uint {

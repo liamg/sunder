@@ -10,11 +10,11 @@ func TestLine(t *testing.T) {
 
 	line := newLine()
 	line.cells = []Cell{
-		{r: 'h'},
-		{r: 'e'},
-		{r: 'l'},
-		{r: 'l'},
-		{r: 'o'},
+		{r: MeasuredRune{Rune: 'h'}},
+		{r: MeasuredRune{Rune: 'e'}},
+		{r: MeasuredRune{Rune: 'l'}},
+		{r: MeasuredRune{Rune: 'l'}},
+		{r: MeasuredRune{Rune: 'o'}},
 	}
 
 	assert.Equal(t, "hello", line.String())

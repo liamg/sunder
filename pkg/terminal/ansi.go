@@ -71,7 +71,7 @@ func (t *Terminal) handleScreenState(readChan chan MeasuredRune) bool {
 		// Fill the whole screen with E's
 		count := buffer.ViewHeight() * buffer.ViewWidth()
 		for count > 0 {
-			buffer.write('E')
+			buffer.write(MeasuredRune{Rune: 'E', Width: 1})
 			count--
 			if count > 0 && !buffer.modes.AutoWrap && count%buffer.ViewWidth() == 0 {
 				buffer.index()
