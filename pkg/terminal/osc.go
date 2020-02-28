@@ -37,7 +37,7 @@ func (t *Terminal) handleOSC(readChan chan MeasuredRune) (renderRequired bool) {
 
 	switch pS[0] {
 	case "0", "2":
-		t.SetTitle(pT)
+		t.setTitle(pT)
 	case "10": // get/set foreground colour
 		if len(pS) > 1 {
 			if pS[1] == "?" {
@@ -55,7 +55,7 @@ func (t *Terminal) handleOSC(readChan chan MeasuredRune) (renderRequired bool) {
 }
 
 func (t *Terminal) isOSCTerminator(r rune) bool {
-	for _, terminator := range OSCTerminators {
+	for _, terminator := range oscTerminators {
 		if terminator == r {
 			return true
 		}

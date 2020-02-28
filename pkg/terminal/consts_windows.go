@@ -2,4 +2,4 @@
 
 package terminal
 
-var OSCTerminators = []rune{0x07, 0x00}
+var oscTerminators = []rune{0x07, 0x00}

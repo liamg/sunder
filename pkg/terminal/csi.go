@@ -139,8 +139,8 @@ func (t *Terminal) csiDeviceStatusReportHandler(params []string) (renderRequired
 	case "6": // report cursor position
 		t.respondToPty([]byte(fmt.Sprintf(
 			"\x1b[%d;%dR",
-			t.ActiveBuffer().CursorLine()+1,
-			t.ActiveBuffer().CursorColumn()+1,
+			t.GetActiveBuffer().CursorLine()+1,
+			t.GetActiveBuffer().CursorColumn()+1,
 		)))
 	}
 
@@ -158,7 +158,7 @@ func (t *Terminal) csiCursorUpHandler(params []string) (renderRequired bool) {
 			distance = 1
 		}
 	}
-	t.ActiveBuffer().MovePosition(0, -int16(distance))
+	t.GetActiveBuffer().movePosition(0, -int16(distance))
 	return true
 }
 
@@ -174,7 +174,7 @@ func (t *Terminal) csiCursorDownHandler(params []string) (renderRequired bool) {
 		}
 	}
 
-	t.ActiveBuffer().MovePosition(0, int16(distance))
+	t.GetActiveBuffer().movePosition(0, int16(distance))
 	return true
 }
 
@@ -190,7 +190,7 @@ func (t *Terminal) csiCursorForwardHandler(params []string) (renderRequired bool
 		}
 	}
 
-	t.ActiveBuffer().MovePosition(int16(distance), 0)
+	t.GetActiveBuffer().movePosition(int16(distance), 0)
 	return true
 }
 
@@ -206,7 +206,7 @@ func (t *Terminal) csiCursorBackwardHandler(params []string) (renderRequired boo
 		}
 	}
 
-	t.ActiveBuffer().MovePosition(-int16(distance), 0)
+	t.GetActiveBuffer().movePosition(-int16(distance), 0)
 	return true
 }
 
@@ -223,8 +223,8 @@ func (t *Terminal) csiCursorNextLineHandler(params []string) (renderRequired boo
 		}
 	}
 
-	t.ActiveBuffer().MovePosition(0, int16(distance))
-	t.ActiveBuffer().SetPosition(0, t.ActiveBuffer().CursorLine())
+	t.GetActiveBuffer().movePosition(0, int16(distance))
+	t.GetActiveBuffer().setPosition(0, t.GetActiveBuffer().CursorLine())
 	return true
 }
 
@@ -240,8 +240,8 @@ func (t *Terminal) csiCursorPrecedingLineHandler(params []string) (renderRequire
 			distance = 1
 		}
 	}
-	t.ActiveBuffer().MovePosition(0, -int16(distance))
-	t.ActiveBuffer().SetPosition(0, t.ActiveBuffer().CursorLine())
+	t.GetActiveBuffer().movePosition(0, -int16(distance))
+	t.GetActiveBuffer().setPosition(0, t.GetActiveBuffer().CursorLine())
 	return true
 }
 
@@ -257,7 +257,7 @@ func (t *Terminal) csiCursorCharacterAbsoluteHandler(params []string) (renderReq
 		}
 	}
 
-	t.ActiveBuffer().SetPosition(uint16(distance-1), t.ActiveBuffer().CursorLine())
+	t.GetActiveBuffer().setPosition(uint16(distance-1), t.GetActiveBuffer().CursorLine())
 	return true
 }
 
@@ -289,7 +289,7 @@ func parseCursorPosition(params []string) (x, y int) {
 func (t *Terminal) csiCursorPositionHandler(params []string) (renderRequired bool) {
 	x, y := parseCursorPosition(params)
 
-	t.ActiveBuffer().SetPosition(uint16(x-1), uint16(y-1))
+	t.GetActiveBuffer().setPosition(uint16(x-1), uint16(y-1))
 	return true
 }
 
@@ -307,7 +307,7 @@ func (t *Terminal) csiScrollUpHandler(params []string) (renderRequired bool) {
 			distance = 1
 		}
 	}
-	t.ActiveBuffer().AreaScrollUp(uint16(distance))
+	t.GetActiveBuffer().areaScrollUp(uint16(distance))
 	return true
 }
 
@@ -326,7 +326,7 @@ func (t *Terminal) csiInsertBlankCharactersHandler(params []string) (renderRequi
 		}
 	}
 
-	t.ActiveBuffer().InsertBlankCharacters(count)
+	t.GetActiveBuffer().insertBlankCharacters(count)
 	return true
 }
 
@@ -345,7 +345,7 @@ func (t *Terminal) csiInsertLinesHandler(params []string) (renderRequired bool) 
 		}
 	}
 
-	t.ActiveBuffer().InsertLines(count)
+	t.GetActiveBuffer().insertLines(count)
 	return true
 }
 
@@ -364,7 +364,7 @@ func (t *Terminal) csiDeleteLinesHandler(params []string) (renderRequired bool) 
 		}
 	}
 
-	t.ActiveBuffer().DeleteLines(count)
+	t.GetActiveBuffer().deleteLines(count)
 	return true
 }
 
@@ -382,7 +382,7 @@ func (t *Terminal) csiScrollDownHandler(params []string) (renderRequired bool) {
 			distance = 1
 		}
 	}
-	t.ActiveBuffer().AreaScrollDown(uint16(distance))
+	t.GetActiveBuffer().areaScrollDown(uint16(distance))
 	return true
 }
 
@@ -390,7 +390,7 @@ func (t *Terminal) csiScrollDownHandler(params []string) (renderRequired bool) {
 // Set Scrolling Region [top;bottom] (default = full size of window) (DECSTBM), VT100
 func (t *Terminal) csiSetMarginsHandler(params []string) (renderRequired bool) {
 	top := 1
-	bottom := int(t.ActiveBuffer().ViewHeight())
+	bottom := int(t.GetActiveBuffer().ViewHeight())
 
 	if len(params) > 2 {
 		return false
@@ -406,16 +406,16 @@ func (t *Terminal) csiSetMarginsHandler(params []string) (renderRequired bool) {
 		if len(params) > 1 {
 			var err error
 			bottom, err = strconv.Atoi(params[1])
-			if err != nil || bottom > int(t.ActiveBuffer().ViewHeight()) || bottom < 1 {
-				bottom = int(t.ActiveBuffer().ViewHeight())
+			if err != nil || bottom > int(t.GetActiveBuffer().ViewHeight()) || bottom < 1 {
+				bottom = int(t.GetActiveBuffer().ViewHeight())
 			}
 		}
 	}
 	top--
 	bottom--
 
-	t.activeBuffer.SetVerticalMargins(uint(top), uint(bottom))
-	t.ActiveBuffer().SetPosition(0, 0)
+	t.activeBuffer.setVerticalMargins(uint(top), uint(bottom))
+	t.GetActiveBuffer().setPosition(0, 0)
 	return true
 }
 
@@ -431,7 +431,7 @@ func (t *Terminal) csiEraseCharactersHandler(params []string) (renderRequired bo
 		}
 	}
 
-	t.ActiveBuffer().EraseCharacters(count)
+	t.GetActiveBuffer().eraseCharacters(count)
 	return true
 }
 
@@ -503,12 +503,12 @@ func (t *Terminal) csiSetMode(modeStr string, enabled bool) bool {
 	case "?3":
 		if enabled {
 			// DECCOLM - COLumn mode, 132 characters per line
-			t.activeBuffer.ResizeView(132, t.activeBuffer.viewHeight)
+			t.activeBuffer.resizeView(132, t.activeBuffer.viewHeight)
 		} else {
 			// DECCOLM - 80 characters per line (erases screen)
-			t.activeBuffer.ResizeView(80, t.activeBuffer.viewHeight)
+			t.activeBuffer.resizeView(80, t.activeBuffer.viewHeight)
 		}
-		t.activeBuffer.Clear()
+		t.activeBuffer.clear()
 		/*
 			case "?4":
 				// DECSCLM
@@ -537,9 +537,9 @@ func (t *Terminal) csiSetMode(modeStr string, enabled bool) bool {
 		t.activeBuffer.modes.ShowCursor = enabled
 	case "?47", "?1047":
 		if enabled {
-			t.UseAltBuffer()
+			t.useAltBuffer()
 		} else {
-			t.UseMainBuffer()
+			t.useMainBuffer()
 		}
 	case "?1000", "?10061000": // ?10061000 seen from htop
 		// enable mouse tracking
@@ -599,15 +599,15 @@ func (t *Terminal) csiSetMode(modeStr string, enabled bool) bool {
 		}
 	case "?1048":
 		if enabled {
-			t.ActiveBuffer().SaveCursor()
+			t.GetActiveBuffer().saveCursor()
 		} else {
-			t.ActiveBuffer().RestoreCursor()
+			t.GetActiveBuffer().restoreCursor()
 		}
 	case "?1049":
 		if enabled {
-			t.UseAltBuffer()
+			t.useAltBuffer()
 		} else {
-			t.UseMainBuffer()
+			t.useMainBuffer()
 		}
 	case "?2004":
 		t.activeBuffer.bracketedPasteMode = enabled
@@ -630,7 +630,7 @@ func (t *Terminal) csiLinePositionAbsoluteHandler(params []string) (renderRequir
 		}
 	}
 
-	t.ActiveBuffer().SetPosition(t.ActiveBuffer().CursorColumn(), uint16(row-1))
+	t.GetActiveBuffer().setPosition(t.GetActiveBuffer().CursorColumn(), uint16(row-1))
 
 	return true
 }
@@ -647,12 +647,12 @@ func (t *Terminal) csiDeleteHandler(params []string) (renderRequired bool) {
 		}
 	}
 
-	t.ActiveBuffer().DeleteChars(n)
+	t.GetActiveBuffer().deleteChars(n)
 	return true
 }
 
 // CSI g
-// Tab Clear (TBC)
+// tab clear (TBC)
 func (t *Terminal) csiTabClearHandler(params []string) (renderRequired bool) {
 	n := "0"
 	if len(params) > 0 {
@@ -660,9 +660,9 @@ func (t *Terminal) csiTabClearHandler(params []string) (renderRequired bool) {
 	}
 	switch n {
 	case "0", "":
-		t.activeBuffer.TabClearAtCursor()
+		t.activeBuffer.tabClearAtCursor()
 	case "3":
-		t.activeBuffer.TabZonk()
+		t.activeBuffer.tabZonk()
 	default:
 		return false
 	}
@@ -680,11 +680,11 @@ func (t *Terminal) csiEraseInDisplayHandler(params []string) (renderRequired boo
 
 	switch n {
 	case "0", "":
-		t.ActiveBuffer().EraseDisplayFromCursor()
+		t.GetActiveBuffer().eraseDisplayFromCursor()
 	case "1":
-		t.ActiveBuffer().EraseDisplayToCursor()
+		t.GetActiveBuffer().eraseDisplayToCursor()
 	case "2", "3":
-		t.ActiveBuffer().EraseDisplay()
+		t.GetActiveBuffer().eraseDisplay()
 	default:
 		return false
 	}
@@ -703,11 +703,11 @@ func (t *Terminal) csiEraseInLineHandler(params []string) (renderRequired bool) 
 
 	switch n {
 	case "0", "": //erase adter cursor
-		t.ActiveBuffer().EraseLineFromCursor()
+		t.GetActiveBuffer().eraseLineFromCursor()
 	case "1": // erase to cursor inclusive
-		t.ActiveBuffer().EraseLineToCursor()
+		t.GetActiveBuffer().eraseLineToCursor()
 	case "2": // erase entire
-		t.ActiveBuffer().EraseLine()
+		t.GetActiveBuffer().eraseLine()
 	default:
 		return false
 	}
@@ -728,40 +728,40 @@ func (t *Terminal) sgrSequenceHandler(params []string) bool {
 
 		switch p {
 		case "00", "0", "":
-			attr := t.ActiveBuffer().CursorAttr()
+			attr := t.GetActiveBuffer().getCursorAttr()
 			*attr = CellAttributes{}
 		case "1", "01":
-			t.ActiveBuffer().CursorAttr().Bold = true
+			t.GetActiveBuffer().getCursorAttr().bold = true
 		case "2", "02":
-			t.ActiveBuffer().CursorAttr().Dim = true
+			t.GetActiveBuffer().getCursorAttr().dim = true
 		case "4", "04":
-			t.ActiveBuffer().CursorAttr().Underline = true
+			t.GetActiveBuffer().getCursorAttr().underline = true
 		case "5", "05":
-			t.ActiveBuffer().CursorAttr().Blink = true
+			t.GetActiveBuffer().getCursorAttr().blink = true
 		case "7", "07":
-			t.ActiveBuffer().CursorAttr().Inverse = true
+			t.GetActiveBuffer().getCursorAttr().inverse = true
 		case "8", "08":
-			t.ActiveBuffer().CursorAttr().Hidden = true
+			t.GetActiveBuffer().getCursorAttr().hidden = true
 		case "21":
-			t.ActiveBuffer().CursorAttr().Bold = false
+			t.GetActiveBuffer().getCursorAttr().bold = false
 		case "22":
-			t.ActiveBuffer().CursorAttr().Dim = false
+			t.GetActiveBuffer().getCursorAttr().dim = false
 		case "23":
 			// not italic
 		case "24":
-			t.ActiveBuffer().CursorAttr().Underline = false
+			t.GetActiveBuffer().getCursorAttr().underline = false
 		case "25":
-			t.ActiveBuffer().CursorAttr().Blink = false
+			t.GetActiveBuffer().getCursorAttr().blink = false
 		case "27":
-			t.ActiveBuffer().CursorAttr().Inverse = false
+			t.GetActiveBuffer().getCursorAttr().inverse = false
 		case "28":
-			t.ActiveBuffer().CursorAttr().Hidden = false
+			t.GetActiveBuffer().getCursorAttr().hidden = false
 		case "29":
 			// not strikethrough
 		case "38": // set foreground
-			t.ActiveBuffer().CursorAttr().FgColour = Colour(p + ";" + strings.Join(params[i:], ";"))
+			t.GetActiveBuffer().getCursorAttr().fgColour = Colour(p + ";" + strings.Join(params[i:], ";"))
 		case "48": // set background
-			t.ActiveBuffer().CursorAttr().BgColour = Colour(p + ";" + strings.Join(params[i:], ";"))
+			t.GetActiveBuffer().getCursorAttr().bgColour = Colour(p + ";" + strings.Join(params[i:], ";"))
 		default:
 			i, err := strconv.Atoi(p)
 			if err != nil {
@@ -769,9 +769,9 @@ func (t *Terminal) sgrSequenceHandler(params []string) bool {
 			}
 			switch true {
 			case i >= 30 && i <= 37, i >= 90 && i <= 97:
-				t.ActiveBuffer().CursorAttr().FgColour = Colour(p)
+				t.GetActiveBuffer().getCursorAttr().fgColour = Colour(p)
 			case i >= 40 && i <= 47, i >= 100 && i <= 107:
-				t.ActiveBuffer().CursorAttr().BgColour = Colour(p)
+				t.GetActiveBuffer().getCursorAttr().bgColour = Colour(p)
 			}
 
 		}

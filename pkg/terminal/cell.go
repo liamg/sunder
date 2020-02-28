@@ -1,34 +1,19 @@
 package terminal
 
-import (
-	"image"
-)
-
 type Cell struct {
-	r     rune
-	attr  CellAttributes
-	image *image.RGBA
+	r    rune
+	attr CellAttributes
 }
 
 type CellAttributes struct {
-	FgColour  Colour
-	BgColour  Colour
-	Bold      bool
-	Dim       bool
-	Underline bool
-	Blink     bool
-	Inverse   bool
-	Hidden    bool
-}
-
-func (cell *Cell) Image() *image.RGBA {
-	return cell.image
-}
-
-func (cell *Cell) SetImage(img *image.RGBA) {
-
-	cell.image = img
-
+	fgColour  Colour
+	bgColour  Colour
+	bold      bool
+	dim       bool
+	underline bool
+	blink     bool
+	inverse   bool
+	hidden    bool
 }
 
 func (cell *Cell) Attr() CellAttributes {
@@ -40,38 +25,30 @@ func (cell *Cell) Rune() rune {
 }
 
 func (cell *Cell) Fg() Colour {
-	if cell.Attr().Inverse {
-		return cell.attr.BgColour
+	if cell.Attr().inverse {
+		return cell.attr.bgColour
 	}
-	return cell.attr.FgColour
+	return cell.attr.fgColour
 }
 
 func (cell *Cell) Bg() Colour {
-	if cell.Attr().Inverse {
-		return cell.attr.FgColour
+	if cell.Attr().inverse {
+		return cell.attr.fgColour
 	}
-	return cell.attr.BgColour
+	return cell.attr.bgColour
 }
 
 func (cell *Cell) erase(bgColour Colour) {
 	cell.setRune(0)
-	cell.attr.BgColour = bgColour
+	cell.attr.bgColour = bgColour
 }
 
 func (cell *Cell) setRune(r rune) {
 	cell.r = r
 }
 
-func NewBackgroundCell(colour Colour) Cell {
-	return Cell{
-		attr: CellAttributes{
-			BgColour: colour,
-		},
-	}
-}
-
 func (cellAttr *CellAttributes) ReverseVideo() {
-	oldFgColour := cellAttr.FgColour
-	cellAttr.FgColour = cellAttr.BgColour
-	cellAttr.BgColour = oldFgColour
+	oldFgColour := cellAttr.fgColour
+	cellAttr.fgColour = cellAttr.bgColour
+	cellAttr.bgColour = oldFgColour
 }

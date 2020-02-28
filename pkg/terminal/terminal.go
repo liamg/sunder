@@ -50,11 +50,28 @@ func (t *Terminal) Pty() *os.File {
 	return t.pty
 }
 
+func (t *Terminal) GetTitle() string {
+	return t.title
+}
+
+// write takes data from StdOut of the child shell and processes it
+func (t *Terminal) Write(data []byte) (n int, err error) {
+	reader := bufio.NewReader(bytes.NewBuffer(data))
+	for {
+		r, size, err := reader.ReadRune()
+		if err == io.EOF {
+			break
+		}
+		t.processChan <- MeasuredRune{Rune: r, Width: size}
+	}
+	return len(data), nil
+}
+
 func (t *Terminal) SetSize(rows, cols uint16) error {
 	if t.pty == nil {
 		return fmt.Errorf("terminal is not running")
 	}
-	t.activeBuffer.ResizeView(cols, rows)
+	t.activeBuffer.resizeView(cols, rows)
 	if err := pty.Setsize(t.pty, &pty.Winsize{
 		Rows: rows,
 		Cols: cols,
@@ -114,19 +131,6 @@ func (t *Terminal) requestRender() {
 	}
 }
 
-// Write takes data from StdOut of the child shell and processes it
-func (t *Terminal) Write(data []byte) (n int, err error) {
-	reader := bufio.NewReader(bytes.NewBuffer(data))
-	for {
-		r, size, err := reader.ReadRune()
-		if err == io.EOF {
-			break
-		}
-		t.processChan <- MeasuredRune{Rune: r, Width: size}
-	}
-	return len(data), nil
-}
-
 func (t *Terminal) writeToRealStdOut(data ...rune) error {
 	_, err := os.Stdout.Write([]byte(string(data)))
 	return err
@@ -163,24 +167,24 @@ func (t *Terminal) processRunes(runes ...MeasuredRune) (renderRequired bool) {
 		// TODO ring bell/proxy?
 		//	continue
 		case 0x08: //backspace
-			t.ActiveBuffer().Backspace()
+			t.GetActiveBuffer().backspace()
 			renderRequired = true
 		case 0x09: //tab
-			t.ActiveBuffer().Tab()
+			t.GetActiveBuffer().tab()
 			renderRequired = true
 		case 0x0a, 0x0b, 0x0c: //newLine
-			t.ActiveBuffer().NewLine()
+			t.GetActiveBuffer().newLine()
 			renderRequired = true
 		case 0x0d: //carriageReturn
-			t.ActiveBuffer().CarriageReturn()
+			t.GetActiveBuffer().carriageReturn()
 			renderRequired = true
 		case 0x0e: //shiftOut
-			t.ActiveBuffer().CurrentCharset = 1
+			t.GetActiveBuffer().CurrentCharset = 1
 		case 0x0f: //shiftIn
-			t.ActiveBuffer().CurrentCharset = 0
+			t.GetActiveBuffer().CurrentCharset = 0
 		default:
 			//terminal.logger.Debugf("Received character 0x%X: %q", b, string(b))
-			t.ActiveBuffer().Write(t.translateRune(r.Rune))
+			t.GetActiveBuffer().write(t.translateRune(r.Rune))
 			renderRequired = true
 		}
 	}
@@ -189,7 +193,7 @@ func (t *Terminal) processRunes(runes ...MeasuredRune) (renderRequired bool) {
 }
 
 func (t *Terminal) translateRune(b rune) rune {
-	table := t.ActiveBuffer().Charsets[t.ActiveBuffer().CurrentCharset]
+	table := t.GetActiveBuffer().Charsets[t.GetActiveBuffer().CurrentCharset]
 	if table == nil {
 		return b
 	}
@@ -200,7 +204,7 @@ func (t *Terminal) translateRune(b rune) rune {
 	return b
 }
 
-func (t *Terminal) SetTitle(title string) {
+func (t *Terminal) setTitle(title string) {
 	t.title = title
 }
 
@@ -213,18 +217,18 @@ func (t *Terminal) switchBuffer(index uint8) {
 	}
 	t.activeBuffer = t.buffers[index]
 	if carrySize {
-		t.activeBuffer.ResizeView(w, h)
+		t.activeBuffer.resizeView(w, h)
 	}
 }
 
-func (t *Terminal) ActiveBuffer() *Buffer {
+func (t *Terminal) GetActiveBuffer() *Buffer {
 	return t.activeBuffer
 }
 
-func (t *Terminal) UseMainBuffer() {
+func (t *Terminal) useMainBuffer() {
 	t.switchBuffer(MainBuffer)
 }
 
-func (t *Terminal) UseAltBuffer() {
+func (t *Terminal) useAltBuffer() {
 	t.switchBuffer(AltBuffer)
 }

@@ -22,21 +22,21 @@ func (t *Terminal) handleANSI(readChan chan MeasuredRune) (renderRequired bool) 
 	case '=':
 		return swallowHandler(0)(readChan) // alt char selection  //@todo
 	case '7':
-		t.ActiveBuffer().SaveCursor()
+		t.GetActiveBuffer().saveCursor()
 	case '8':
-		t.ActiveBuffer().RestoreCursor()
+		t.GetActiveBuffer().restoreCursor()
 	case 'D':
-		t.ActiveBuffer().Index()
+		t.GetActiveBuffer().index()
 	case 'E':
-		t.ActiveBuffer().NewLineEx(true)
+		t.GetActiveBuffer().newLineEx(true)
 	case 'H':
-		t.ActiveBuffer().TabSetAtCursor()
+		t.GetActiveBuffer().tabSetAtCursor()
 	case 'M':
-		t.ActiveBuffer().ReverseIndex()
+		t.GetActiveBuffer().reverseIndex()
 	case 'P': // TODO swallow sixel output to prevent mess
 		return false
 	case 'c':
-		t.ActiveBuffer().Clear()
+		t.GetActiveBuffer().clear()
 	case '#':
 		return t.handleScreenState(readChan)
 	case '^':
@@ -64,22 +64,22 @@ func (t *Terminal) handleScreenState(readChan chan MeasuredRune) bool {
 	case '8': // DECALN -- Screen Alignment Pattern
 
 		// hide cursor?
-		buffer := t.ActiveBuffer()
-		buffer.ResetVerticalMargins(uint(buffer.viewHeight))
+		buffer := t.GetActiveBuffer()
+		buffer.resetVerticalMargins(uint(buffer.viewHeight))
 		buffer.SetScrollOffset(0)
 
 		// Fill the whole screen with E's
 		count := buffer.ViewHeight() * buffer.ViewWidth()
 		for count > 0 {
-			buffer.Write('E')
+			buffer.write('E')
 			count--
 			if count > 0 && !buffer.modes.AutoWrap && count%buffer.ViewWidth() == 0 {
-				buffer.Index()
-				buffer.CarriageReturn()
+				buffer.index()
+				buffer.carriageReturn()
 			}
 		}
 		// restore cursor
-		buffer.SetPosition(0, 0)
+		buffer.setPosition(0, 0)
 	default:
 		return false
 	}

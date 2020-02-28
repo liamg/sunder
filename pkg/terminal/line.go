@@ -18,18 +18,14 @@ func newLine() Line {
 	}
 }
 
-func (line *Line) Cells() []Cell {
-	return line.cells
-}
-
-func (line *Line) ReverseVideo() {
+func (line *Line) reverseVideo() {
 	for i, _ := range line.cells {
 		line.cells[i].attr.ReverseVideo()
 	}
 }
 
-// Cleanse removes null bytes from the end of the row
-func (line *Line) Cleanse() {
+// cleanse removes null bytes from the end of the row
+func (line *Line) cleanse() {
 	cut := 0
 	for i := len(line.cells) - 1; i >= 0; i-- {
 		if line.cells[i].r != 0 {
@@ -60,13 +56,13 @@ func (line *Line) String() string {
 }
 
 // @todo test these (ported from legacy) ------------------
-func (line *Line) CutCellsAfter(n int) []Cell {
+func (line *Line) cutCellsAfter(n int) []Cell {
 	cut := line.cells[n:]
 	line.cells = line.cells[:n]
 	return cut
 }
 
-func (line *Line) CutCellsFromBeginning(n int) []Cell {
+func (line *Line) cutCellsFromBeginning(n int) []Cell {
 	if n > len(line.cells) {
 		n = len(line.cells)
 	}
@@ -75,13 +71,13 @@ func (line *Line) CutCellsFromBeginning(n int) []Cell {
 	return cut
 }
 
-func (line *Line) CutCellsFromEnd(n int) []Cell {
+func (line *Line) cutCellsFromEnd(n int) []Cell {
 	cut := line.cells[len(line.cells)-n:]
 	line.cells = line.cells[:len(line.cells)-n]
 	return cut
 }
 
-func (line *Line) Append(cells ...Cell) {
+func (line *Line) append(cells ...Cell) {
 	line.cells = append(line.cells, cells...)
 }
 
