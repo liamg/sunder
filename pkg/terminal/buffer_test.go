@@ -117,7 +117,7 @@ func TestBufferWriteIncrementsCursorCorrectly(t *testing.T) {
 
 func TestWritingNewLineAsFirstRuneOnWrappedLine(t *testing.T) {
 	b := makeBufferForTesting(3, 20)
-	b.LineFeedMode = false
+	b.modes.LineFeedMode = false
 
 	b.Write('a', 'b', 'c')
 	assert.Equal(t, uint16(3), b.cursorX)
@@ -142,7 +142,7 @@ func TestWritingNewLineAsFirstRuneOnWrappedLine(t *testing.T) {
 
 func TestWritingNewLineAsSecondRuneOnWrappedLine(t *testing.T) {
 	b := makeBufferForTesting(3, 20)
-	b.LineFeedMode = false
+	b.modes.LineFeedMode = false
 	/*
 		|abc
 		|d
@@ -622,7 +622,7 @@ goodbyegoodbye`
 
 func TestBufferMaxLines(t *testing.T) {
 	b := NewBuffer(80, 2, 2)
-	b.LineFeedMode = false
+	b.modes.LineFeedMode = false
 
 	b.Write([]rune("hello")...)
 	b.NewLine()

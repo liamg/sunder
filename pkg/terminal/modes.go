@@ -4,6 +4,11 @@ type Modes struct {
 	ShowCursor            bool
 	ApplicationCursorKeys bool
 	BlinkingCursor        bool
+	ReplaceMode           bool // overwrite character at cursor or insert new
+	OriginMode            bool // see DECOM docs - whether cursor is positioned within the margins or not
+	LineFeedMode          bool
+	ScreenMode            bool // DECSCNM (black on white background)
+	AutoWrap              bool
 }
 
 type MouseMode uint

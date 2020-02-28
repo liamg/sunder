@@ -8,35 +8,28 @@ import (
 )
 
 type Buffer struct {
-	lines               []Line
-	savedX              uint16
-	savedY              uint16
-	savedCursorAttr     *CellAttributes
-	savedCharsets       []*map[rune]rune
-	savedCurrentCharset int
-	topMargin           uint // see DECSTBM docs - this is for scrollable regions
-	bottomMargin        uint // see DECSTBM docs - this is for scrollable regions
-	viewWidth           uint16
-	viewHeight          uint16
-	cursorX             uint16
-	cursorY             uint16
-	cursorAttr          CellAttributes
-	// copied from state:
+	lines                 []Line
+	savedX                uint16
+	savedY                uint16
+	savedCursorAttr       *CellAttributes
+	savedCharsets         []*map[rune]rune
+	savedCurrentCharset   int
+	topMargin             uint // see DECSTBM docs - this is for scrollable regions
+	bottomMargin          uint // see DECSTBM docs - this is for scrollable regions
+	viewWidth             uint16
+	viewHeight            uint16
+	cursorX               uint16
+	cursorY               uint16
+	cursorAttr            CellAttributes
 	scrollLinesFromBottom uint
-	ReplaceMode           bool // overwrite character at cursor or insert new
-	OriginMode            bool // see DECOM docs - whether cursor is positioned within the margins or not
-	LineFeedMode          bool
-	ScreenMode            bool // DECSCNM (black on white background)
-	AutoWrap              bool
 	maxLines              uint64
 	tabStops              map[uint16]struct{}
 	Charsets              []*map[rune]rune // array of 2 charsets, nil means ASCII (no conversion)
 	CurrentCharset        int              // active charset index in Charsets array, valid values are 0 or 1
-
-	modes              Modes
-	mouseMode          MouseMode
-	mouseExtMode       MouseExtMode
-	bracketedPasteMode bool
+	modes                 Modes
+	mouseMode             MouseMode
+	mouseExtMode          MouseExtMode
+	bracketedPasteMode    bool
 }
 
 type Position struct {
@@ -62,13 +55,13 @@ func NewBuffer(width, height uint16, maxLines uint64) *Buffer {
 		viewHeight:   height,
 		viewWidth:    width,
 		maxLines:     maxLines,
-		AutoWrap:     true,
 		topMargin:    0,
 		bottomMargin: uint(height - 1),
 		Charsets:     []*map[rune]rune{nil, nil},
-		LineFeedMode: true,
 		modes: Modes{
-			ShowCursor: true,
+			LineFeedMode: true,
+			AutoWrap:     true,
+			ShowCursor:   true,
 		},
 	}
 	b.TabReset()
@@ -181,7 +174,7 @@ func (buffer *Buffer) CursorLineAbsolute() uint16 {
 
 // CursorLine returns cursor line (in Origin Mode it is relative to the top margin)
 func (buffer *Buffer) CursorLine() uint16 {
-	if buffer.OriginMode {
+	if buffer.modes.OriginMode {
 		result := buffer.cursorY - uint16(buffer.topMargin)
 		if result < 0 {
 			result = 0
@@ -378,7 +371,7 @@ func (buffer *Buffer) Write(runes ...rune) {
 
 		line := buffer.getCurrentLine()
 
-		if buffer.ReplaceMode {
+		if buffer.modes.ReplaceMode {
 
 			if buffer.CursorColumn() >= buffer.Width() {
 				// @todo replace rune at position 0 on next line down
@@ -396,7 +389,7 @@ func (buffer *Buffer) Write(runes ...rune) {
 
 		if buffer.CursorColumn() >= buffer.Width() { // if we're after the line, move to next
 
-			if buffer.AutoWrap {
+			if buffer.modes.AutoWrap {
 
 				buffer.NewLineEx(true)
 
@@ -535,7 +528,7 @@ func (buffer *Buffer) SetPosition(col uint16, line uint16) {
 	useLine := line
 	maxLine := buffer.ViewHeight() - 1
 
-	if buffer.OriginMode {
+	if buffer.modes.OriginMode {
 		useLine += uint16(buffer.topMargin)
 		maxLine = uint16(buffer.bottomMargin)
 		// @todo left and right margins
@@ -570,7 +563,7 @@ func (buffer *Buffer) Clear() {
 	for i := 0; i < int(buffer.ViewHeight()); i++ {
 		buffer.lines = append(buffer.lines, newLine())
 	}
-	buffer.SetPosition(0, 0) // do we need to set position?
+	buffer.SetPosition(0, 0)
 }
 
 func (buffer *Buffer) ReallyClear() {
@@ -874,7 +867,7 @@ func (buffer *Buffer) DefaultCell(applyEffects bool) Cell {
 }
 
 func (buffer *Buffer) IsNewLineMode() bool {
-	return buffer.LineFeedMode == false
+	return buffer.modes.LineFeedMode == false
 }
 
 func (buffer *Buffer) TabZonk() {

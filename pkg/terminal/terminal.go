@@ -154,8 +154,54 @@ func (t *Terminal) process() {
 }
 
 func (t *Terminal) processRunes(runes ...MeasuredRune) (renderRequired bool) {
-	// TODO handle BELL/BACKSPACE etc.
-	return true
+
+	for _, r := range runes {
+		switch r.Rune {
+		//case 0x05: //enq
+		//	continue
+		//case 0x07: //bell
+		// TODO ring bell/proxy?
+		//	continue
+		case 0x08: //backspace
+			t.ActiveBuffer().Backspace()
+			renderRequired = true
+		case 0x09: //tab
+			t.ActiveBuffer().Tab()
+			renderRequired = true
+		case 0x0a, 0x0b, 0x0c: //newLine
+			t.ActiveBuffer().NewLine()
+			renderRequired = true
+		case 0x0d: //carriageReturn
+			t.ActiveBuffer().CarriageReturn()
+			renderRequired = true
+		case 0x0e: //shiftOut
+			t.ActiveBuffer().CurrentCharset = 1
+		case 0x0f: //shiftIn
+			t.ActiveBuffer().CurrentCharset = 0
+		default:
+			//terminal.logger.Debugf("Received character 0x%X: %q", b, string(b))
+			t.ActiveBuffer().Write(t.translateRune(r.Rune))
+			renderRequired = true
+		}
+	}
+
+	return renderRequired
+}
+
+func (t *Terminal) translateRune(b rune) rune {
+	table := t.ActiveBuffer().Charsets[t.ActiveBuffer().CurrentCharset]
+	if table == nil {
+		return b
+	}
+	chr, ok := (*table)[b]
+	if ok {
+		return chr
+	}
+	return b
+}
+
+func (t *Terminal) SetTitle(title string) {
+	t.title = title
 }
 
 func (t *Terminal) switchBuffer(index uint8) {

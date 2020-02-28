@@ -7,8 +7,98 @@ func (t *Terminal) handleANSI(readChan chan MeasuredRune) (renderRequired bool) 
 	switch r.Rune {
 	case '[':
 		return t.handleCSI(readChan)
+	case ']':
+		return t.handleOSC(readChan)
+	case '(':
+		return t.handleSCS0(readChan) // select character set into G0
+	case ')':
+		return t.handleSCS1(readChan) // select character set into G1
+	case '*':
+		return swallowHandler(1)(readChan) // character set bullshit
+	case '+':
+		return swallowHandler(1)(readChan) // character set bullshit
+	case '>':
+		return swallowHandler(0)(readChan) // numeric char selection  //@todo
+	case '=':
+		return swallowHandler(0)(readChan) // alt char selection  //@todo
+	case '7':
+		t.ActiveBuffer().SaveCursor()
+	case '8':
+		t.ActiveBuffer().RestoreCursor()
+	case 'D':
+		t.ActiveBuffer().Index()
+	case 'E':
+		t.ActiveBuffer().NewLineEx(true)
+	case 'H':
+		t.ActiveBuffer().TabSetAtCursor()
+	case 'M':
+		t.ActiveBuffer().ReverseIndex()
+	case 'P': // TODO swallow sixel output to prevent mess
+		return false
+	case 'c':
+		t.ActiveBuffer().Clear()
+	case '#':
+		return t.handleScreenState(readChan)
+	case '^':
+		return t.handlePrivacyMessage(readChan)
 	default: // TODO if the escape sequence is unknown, pass it to real stdout - review as this is kind of risky...
 		_ = t.writeToRealStdOut(0x1b, r.Rune)
 		return false
 	}
+
+	return true
+}
+
+func swallowHandler(size int) func(pty chan MeasuredRune) bool {
+	return func(pty chan MeasuredRune) bool {
+		for i := 0; i < size; i++ {
+			<-pty
+		}
+		return false
+	}
+}
+
+func (t *Terminal) handleScreenState(readChan chan MeasuredRune) bool {
+	b := <-readChan
+	switch b.Rune {
+	case '8': // DECALN -- Screen Alignment Pattern
+
+		// hide cursor?
+		buffer := t.ActiveBuffer()
+		buffer.ResetVerticalMargins(uint(buffer.viewHeight))
+		buffer.SetScrollOffset(0)
+
+		// Fill the whole screen with E's
+		count := buffer.ViewHeight() * buffer.ViewWidth()
+		for count > 0 {
+			buffer.Write('E')
+			count--
+			if count > 0 && !buffer.modes.AutoWrap && count%buffer.ViewWidth() == 0 {
+				buffer.Index()
+				buffer.CarriageReturn()
+			}
+		}
+		// restore cursor
+		buffer.SetPosition(0, 0)
+	default:
+		return false
+	}
+	return true
+}
+
+func (t *Terminal) handlePrivacyMessage(readChan chan MeasuredRune) bool {
+	isEscaped := false
+	for {
+		b := <-readChan
+		if b.Rune == 0x18 /*CAN*/ || b.Rune == 0x1a /*SUB*/ || (b.Rune == 0x5c /*backslash*/ && isEscaped) {
+			break
+		}
+		if isEscaped {
+			isEscaped = false
+		} else if b.Rune == 0x1b {
+			isEscaped = true
+			continue
+		}
+	}
+	return false
 }
