@@ -22,17 +22,13 @@ func (cellAttr *CellAttributes) reverseVideo() {
 // GetDiffANSI takes a previous cell attribute set and diffs to this one, producing the
 // most efficient ANSI output to achieve the diff
 func (cellAttr CellAttributes) GetDiffANSI(prev CellAttributes) string {
-	var reset bool
-	var segments []string
 
-	if cellAttr.bgColour == "" {
-		cellAttr.bgColour = "0"
-	}
+	var segments []string
 
 	// set fg
 	if prev.fgColour != cellAttr.fgColour {
-		if cellAttr.fgColour == "" || cellAttr.fgColour == "0" {
-			reset = true
+		if cellAttr.fgColour == "" {
+			segments = append(segments, "39")
 		} else {
 			segments = append(segments, string(cellAttr.fgColour))
 		}
@@ -40,18 +36,14 @@ func (cellAttr CellAttributes) GetDiffANSI(prev CellAttributes) string {
 
 	// set bg
 	if prev.bgColour != cellAttr.bgColour {
-		if cellAttr.bgColour == "" || cellAttr.bgColour == "0" {
-			reset = true
+		if cellAttr.bgColour == "" {
+			segments = append(segments, "49")
 		} else {
 			segments = append(segments, string(cellAttr.bgColour))
 		}
 	}
 
 	// TODO add sequences for bold, dim, blink etc. diffs
-
-	if reset {
-		segments = append([]string{"0"}, segments...)
-	}
 
 	if len(segments) == 0 {
 		return ""

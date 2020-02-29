@@ -31,14 +31,25 @@ func (m *Multiplexer) render(pane *pane.Pane) {
 	// grab cursor to restore afterwards - could use ansi code and let parent terminal handle this?
 	cursorX, cursorY := buffer.CursorColumn(), buffer.CursorLine()
 
+	m.setCursorVisible(false)
+
 	cursorX += offsetPosition.Origin.X
 	cursorY += offsetPosition.Origin.Y
 
 	var lastCellAttr sunderterm.CellAttributes
 
+	localX, localY := cursorX, cursorY
+	var targetX, targetY uint16
+
 	for y := uint16(0); y < m.rows; y++ {
 		for x := uint16(0); x < m.cols; x++ {
 			cell := buffer.GetCell(x, y)
+
+			targetX, targetY = offsetPosition.Origin.X+x, offsetPosition.Origin.Y+y
+			if localX != targetX || localY != targetY {
+				m.moveCursor(localX, localY)
+				localX, localY = targetX, targetY
+			}
 
 			if cell != nil {
 				measuredRune := cell.Rune()
@@ -48,20 +59,26 @@ func (m *Multiplexer) render(pane *pane.Pane) {
 					measuredRune.Rune = 0x20
 				}
 
-				m.moveCursor(offsetPosition.Origin.X+x, offsetPosition.Origin.Y+y)
 				sgr := cell.Attr().GetDiffANSI(lastCellAttr)
-				m.writeToStdOut([]byte(sgr + string(measuredRune.Rune)))
-				lastCellAttr = cell.Attr()
+
+				if measuredRune.Width > 0 {
+					m.writeToStdOut([]byte(sgr + string(measuredRune.Rune)))
+					lastCellAttr = cell.Attr()
+				}
 			} else {
-				m.moveCursor(offsetPosition.Origin.X+x, offsetPosition.Origin.Y+y)
+
 				// TODO reset SGR?
 				m.writeToStdOut([]byte{0x20})
 			}
-
+			localX++
 		}
 	}
 
-	// move cursor back
-	m.moveCursor(cursorX, cursorY)
+	// only show the cursor for the active pane
+	if pane == m.activePane {
+		// move cursor back
+		m.moveCursor(cursorX, cursorY)
+		m.setCursorVisible(buffer.IsCursorVisible())
+	}
 
 }

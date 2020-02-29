@@ -44,6 +44,8 @@ func (t *Terminal) handleCSI(readChan chan MeasuredRune) (renderRequired bool) {
 		params = []string{}
 	}
 
+	t.log("CSI P(%s) I(%s) %c", param, string(intermediate), final)
+
 	switch final {
 	case 'c':
 		return t.csiSendDeviceAttributesHandler(params)
@@ -102,7 +104,9 @@ func (t *Terminal) handleCSI(readChan chan MeasuredRune) (renderRequired bool) {
 	default:
 		// TODO review this:
 		// if this is an unknown CSI sequence, write it to stdout as we can't handle it?
-		_ = t.writeToRealStdOut(append([]rune{0x1b, '['}, raw...)...)
+		//_ = t.writeToRealStdOut(append([]rune{0x1b, '['}, raw...)...)
+		_ = raw
+		t.log("UNKNOWN CSI P(%s) I(%s) %c", param, string(intermediate), final)
 		return false
 	}
 
@@ -770,9 +774,9 @@ func (t *Terminal) sgrSequenceHandler(params []string) bool {
 				return false
 			}
 			switch true {
-			case i >= 30 && i <= 37, i >= 90 && i <= 97:
+			case i >= 30 && i <= 37, i >= 90 && i <= 97, i == 39:
 				t.GetActiveBuffer().getCursorAttr().fgColour = Colour(p)
-			case i >= 40 && i <= 47, i >= 100 && i <= 107:
+			case i >= 40 && i <= 47, i >= 100 && i <= 107, i == 49:
 				t.GetActiveBuffer().getCursorAttr().bgColour = Colour(p)
 			}
 

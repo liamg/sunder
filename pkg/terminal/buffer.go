@@ -69,6 +69,10 @@ func NewBuffer(width, height uint16, maxLines uint64) *Buffer {
 	return b
 }
 
+func (buffer *Buffer) IsCursorVisible() bool {
+	return buffer.modes.ShowCursor
+}
+
 func (buffer *Buffer) HasScrollableRegion() bool {
 	return buffer.topMargin > 0 || buffer.bottomMargin < uint(buffer.ViewHeight())-1
 }

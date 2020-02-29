@@ -20,18 +20,18 @@ const (
 
 // Terminal communicates with the underlying terminal which is running shox
 type Terminal struct {
-	pty         *os.File
-	updateChan  chan struct{}
-	processChan chan MeasuredRune
-	closeChan   chan struct{}
-	//
+	pty          *os.File
+	updateChan   chan struct{}
+	processChan  chan MeasuredRune
+	closeChan    chan struct{}
 	buffers      []*Buffer
 	activeBuffer *Buffer
 	title        string
+	logFile      *os.File
 }
 
 // NewTerminal creates a new terminal instance
-func New() *Terminal {
+func New(options ...Option) *Terminal {
 	term := &Terminal{
 		processChan: make(chan MeasuredRune, 0xffff),
 		closeChan:   make(chan struct{}),
@@ -42,7 +42,16 @@ func New() *Terminal {
 		NewBuffer(1, 1, 0xffff),
 	}
 	term.activeBuffer = term.buffers[0]
+	for _, opt := range options {
+		opt(term)
+	}
 	return term
+}
+
+func (t *Terminal) log(line string, params ...interface{}) {
+	if t.logFile != nil {
+		_, _ = fmt.Fprintf(t.logFile, line+"\n", params...)
+	}
 }
 
 // Pty exposes the underlying terminal pty, if it exists

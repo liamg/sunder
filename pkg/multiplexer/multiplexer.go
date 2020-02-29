@@ -33,7 +33,7 @@ type Multiplexer struct {
 func New() *Multiplexer {
 	update := make(chan *pane.Pane, 0xff)
 	mp := &Multiplexer{
-		panes:      []*pane.Pane{pane.NewPane(pane.NewFullscreenPosition(), update, sunderterm.New())},
+		panes:      []*pane.Pane{pane.NewPane(pane.NewFullscreenPosition(), update, sunderterm.New(sunderterm.WithLogFile("/tmp/sunder.log")))},
 		output:     make(chan byte, 0xffff),
 		updateChan: update,
 		closeChan:  make(chan struct{}),
@@ -133,6 +133,16 @@ func (m *Multiplexer) Close() {
 
 func (m *Multiplexer) moveCursor(x, y uint16) {
 	m.writeToStdOut([]byte(fmt.Sprintf("\x1b[%d;%dH", y+1, x+1))) // 1-indexed
+}
+
+func (m *Multiplexer) setCursorVisible(visible bool) {
+	ctrl := "\x1b[?25"
+	if visible {
+		ctrl += "h"
+	} else {
+		ctrl += "l"
+	}
+	m.writeToStdOut([]byte(ctrl)) // 1-indexed
 }
 
 func (m *Multiplexer) resize(rows uint16, cols uint16) error {
