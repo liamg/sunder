@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/liamg/sunder/pkg/multiplexer"
@@ -21,4 +22,7 @@ func main() {
 	if err := mp.Start(); err != nil {
 		panic(err)
 	}
+
+	// reset terminal on exit
+	fmt.Printf("\x1bc")
 }

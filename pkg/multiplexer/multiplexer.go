@@ -32,6 +32,7 @@ type Multiplexer struct {
 	cols       uint16
 	renderLock sync.Mutex
 	paneLock   sync.Mutex
+	waitGroup sync.WaitGroup
 }
 
 func New() *Multiplexer {
@@ -82,7 +83,9 @@ func (m *Multiplexer) Start() error {
 	// Handle pty size.
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGWINCH)
+	m.waitGroup.Add(1)
 	go func() {
+		defer m.waitGroup.Done()
 		for {
 			select {
 			case <-ch:
@@ -114,14 +117,25 @@ func (m *Multiplexer) Start() error {
 
 	// kick off root pane
 	m.rootPane.SetActive(m.activePane)
-	go func() { _ = m.rootPane.Start(size.Rows, size.Cols) }()
+	m.waitGroup.Add(1)
+	go func() {
+		defer m.waitGroup.Done()
+		_ = m.rootPane.Start(size.Rows, size.Cols)
+	}()
 
 	// tidy up root pane on exit
 	defer m.rootPane.Close()
 
 	// Copy stdin to the multiplexer and the multiplexer output to stdout.
-	go func() { _, _ = io.Copy(m, os.Stdin) }()
+	m.waitGroup.Add(1)
 	go func() {
+		defer m.waitGroup.Done()
+		_, _ = io.Copy(m, os.Stdin)
+	}()
+
+	m.waitGroup.Add(1)
+	go func() {
+		defer m.waitGroup.Done()
 		for {
 			select {
 			case p := <-m.updateChan:
@@ -134,9 +148,6 @@ func (m *Multiplexer) Start() error {
 
 	m.renderLock.Unlock()
 	_, err = io.Copy(os.Stdout, m)
-
-	// reset terminal on exit
-	ansi.NewWriter(os.Stdout).Reset()
 
 	return err
 
@@ -152,6 +163,8 @@ func (m *Multiplexer) Close() {
 	m.closeOnce.Do(func() {
 		close(m.closeChan)
 	})
+
+	m.waitGroup.Wait()
 }
 
 func (m *Multiplexer) resize(rows uint16, cols uint16) error {

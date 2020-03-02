@@ -124,6 +124,7 @@ func (p *TerminalPane) Render(target Pane, offsetX, offsetY, rows, cols uint16, 
 	cursorX, cursorY := buffer.CursorColumn(), buffer.CursorLine()
 
 	w.SetCursorVisible(false)
+	w.ResetFormatting()
 
 	// replace mode!
 	_, _ = w.Write([]byte("\x1b[?4l"))
@@ -149,15 +150,16 @@ func (p *TerminalPane) Render(target Pane, offsetX, offsetY, rows, cols uint16, 
 					measuredRune.Rune = 0x20
 				}
 
-				sgr := cell.Attr().GetDiffANSI(lastCellAttr)
-
 				//if measuredRune.Width > 0 {
+				sgr := cell.Attr().GetDiffANSI(lastCellAttr)
 				_, _ = w.Write([]byte(sgr + string(measuredRune.Rune)))
 				lastCellAttr = cell.Attr()
 				//}
 			} else {
-				lastCellAttr = terminal.CellAttributes{}
-				w.ResetFormatting()
+				attr := terminal.CellAttributes{}
+				sgr := attr.GetDiffANSI(lastCellAttr)
+				lastCellAttr = attr
+				_, _ = w.Write([]byte(sgr))
 				_, _ = w.Write([]byte{0x20})
 			}
 		}

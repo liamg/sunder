@@ -144,8 +144,12 @@ func (p *ContainerPane) Render(target Pane, offsetX, offsetY, rows, cols uint16,
 			target = child
 
 			// only draw border if rendering of whole container requested
-			writer.SetCursorVisible(false)
+
 			if i < len(p.children)-1 {
+
+				writer.Write([]byte("\x1b[31m"))
+				writer.SetCursorVisible(false)
+
 				switch p.mode {
 				case Horizontal:
 					writer.MoveCursorTo(offsetY+childOffsetY+h, offsetX+childOffsetX)
@@ -158,8 +162,10 @@ func (p *ContainerPane) Render(target Pane, offsetX, offsetY, rows, cols uint16,
 						_, _ = writer.Write([]byte("┃"))
 					}
 				}
+
+				writer.SetCursorVisible(true)
 			}
-			writer.SetCursorVisible(true)
+
 		}
 
 		child.Render(target, offsetX+childOffsetX, offsetY+childOffsetY, h, w, writer)

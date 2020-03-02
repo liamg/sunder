@@ -110,6 +110,7 @@ func (p *StatusPane) Render(target Pane, offsetX, offsetY, rows, cols uint16, wr
 		}
 
 		writer.ClearLine()
+		writer.ResetFormatting()
 
 		// set colours
 		_, _ = writer.Write([]byte("\r\x1b[41m\x1b[97m"))
