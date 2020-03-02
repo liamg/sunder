@@ -170,6 +170,15 @@ func (p *ContainerPane) Render(target Pane, offsetX, offsetY, rows, cols uint16,
 func (p *ContainerPane) FindActive() Pane {
 	for _, child := range p.children {
 		if active := child.FindActive(); active != nil {
+			if !active.Exists() {
+				for _, candidate := range p.children {
+					if candidate.Exists() {
+						p.SetActive(candidate)
+						return candidate
+					}
+				}
+				return p
+			}
 			return active
 		}
 	}
@@ -241,6 +250,9 @@ func (p *ContainerPane) Split(target Pane, mode SplitMode) bool {
 				_ = container.Start(h, w)
 				p.childWait.Done()
 			}()
+
+			// make new pane the active
+			container.SetActive(termPane)
 
 			return true
 		} else if splitter, ok := child.(Splitter); ok {
