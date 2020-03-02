@@ -8,6 +8,8 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/liamg/sunder/pkg/logger"
+
 	"github.com/creack/pty"
 	"golang.org/x/crypto/ssh/terminal"
 )
@@ -80,6 +82,10 @@ func (t *Terminal) SetSize(rows, cols uint16) error {
 	if t.pty == nil {
 		return fmt.Errorf("terminal is not running")
 	}
+
+	logger.Log("Resizing pty to %dx%d", cols, rows)
+	t.log("RESIZE %d, %d\n", cols, rows)
+
 	t.activeBuffer.resizeView(cols, rows)
 	if err := pty.Setsize(t.pty, &pty.Winsize{
 		Rows: rows,
@@ -113,6 +119,7 @@ func (t *Terminal) Run(updateChan chan struct{}, rows uint16, cols uint16) error
 	// Make sure to close the pty at the end.
 	defer func() { _ = t.pty.Close() }() // Best effort.
 
+	logger.Log("Starting terminal with size %dx%d", cols, rows)
 	if err := t.SetSize(rows, cols); err != nil {
 		return err
 	}
