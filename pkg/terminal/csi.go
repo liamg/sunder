@@ -6,10 +6,10 @@ import (
 	"strings"
 )
 
-func parseCSI(readChan chan MeasuredRune) (final rune, param string, intermediate []rune, raw []rune) {
+func parseCSI(readChan chan MeasuredRune) (final rune, params []string, intermediate []rune, raw []rune) {
 	var b MeasuredRune
 
-	param = ""
+	param := ""
 	intermediate = []rune{}
 CSI:
 	for {
@@ -26,11 +26,24 @@ CSI:
 		}
 	}
 
-	return final, param, intermediate, raw
+	unprocessed := strings.Split(param, ";")
+	for _, par := range unprocessed {
+		if par != "" {
+			par = strings.TrimLeft(par, "0")
+			if par == "" {
+				par = "0"
+			}
+			params = append(params, par)
+		}
+	}
+
+	return final, params, intermediate, raw
 }
 
 func (t *Terminal) handleCSI(readChan chan MeasuredRune) (renderRequired bool) {
-	final, param, intermediate, raw := parseCSI(readChan)
+	final, params, intermediate, raw := parseCSI(readChan)
+
+	t.log("CSI P(%q) I(%q) %c", strings.Join(params, ";"), string(intermediate), final)
 
 	for _, b := range intermediate {
 		t.processRunes(MeasuredRune{
@@ -38,13 +51,6 @@ func (t *Terminal) handleCSI(readChan chan MeasuredRune) (renderRequired bool) {
 			Width: 1, // TODO: measure these? should only be control characters...
 		})
 	}
-
-	params := strings.Split(param, ";")
-	if param == "" {
-		params = []string{}
-	}
-
-	t.log("CSI P(%s) I(%s) %c", param, string(intermediate), final)
 
 	switch final {
 	case 'c':
@@ -106,7 +112,7 @@ func (t *Terminal) handleCSI(readChan chan MeasuredRune) (renderRequired bool) {
 		// if this is an unknown CSI sequence, write it to stdout as we can't handle it?
 		//_ = t.writeToRealStdOut(append([]rune{0x1b, '['}, raw...)...)
 		_ = raw
-		t.log("UNKNOWN CSI P(%s) I(%s) %c", param, string(intermediate), final)
+		t.log("UNKNOWN CSI P(%s) I(%s) %c", strings.Join(params, ";"), string(intermediate), final)
 		return false
 	}
 
@@ -276,9 +282,10 @@ func parseCursorPosition(params []string) (x, y int) {
 			}
 		}
 	}
-	if len(params) == 2 {
+	if len(params) >= 2 {
 		if params[1] != "" {
-			x, err := strconv.Atoi(string(params[1]))
+			var err error
+			x, err = strconv.Atoi(string(params[1]))
 			if err != nil || x < 1 {
 				x = 1
 			}
@@ -294,7 +301,6 @@ func parseCursorPosition(params []string) (x, y int) {
 // Cursor Position [row;column] (default = [1,1]) (CUP)
 func (t *Terminal) csiCursorPositionHandler(params []string) (renderRequired bool) {
 	x, y := parseCursorPosition(params)
-
 	t.GetActiveBuffer().setPosition(uint16(x-1), uint16(y-1))
 	return true
 }

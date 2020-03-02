@@ -42,7 +42,8 @@ func (t *Terminal) handleANSI(readChan chan MeasuredRune) (renderRequired bool) 
 	case '^':
 		return t.handlePrivacyMessage(readChan)
 	default: // TODO if the escape sequence is unknown, pass it to real stdout - review as this is kind of risky...
-		_ = t.writeToRealStdOut(0x1b, r.Rune)
+		t.log("UNKNOWN ESCAPE SEQUENCE: 0x%X", r.Rune)
+		//_ = t.writeToRealStdOut(0x1b, r.Rune)
 		return false
 	}
 

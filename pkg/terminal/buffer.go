@@ -513,6 +513,18 @@ func (buffer *Buffer) newLine() {
 	buffer.newLineEx(false)
 }
 
+func (buffer *Buffer) verticalTab() {
+	buffer.index()
+
+	for {
+		line := buffer.getCurrentLine()
+		if !line.wrapped {
+			break
+		}
+		buffer.index()
+	}
+}
+
 func (buffer *Buffer) newLineEx(forceCursorToMargin bool) {
 
 	if buffer.IsNewLineMode() || forceCursorToMargin {

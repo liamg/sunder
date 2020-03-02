@@ -169,29 +169,41 @@ func (t *Terminal) process() {
 func (t *Terminal) processRunes(runes ...MeasuredRune) (renderRequired bool) {
 
 	for _, r := range runes {
+
+		t.log("%c 0x%X", r.Rune, r.Rune)
+
 		switch r.Rune {
-		case 0x05: //enq
-			continue
-		case 0x07: //bell
-			//TODO handle this properly
-			continue
-		case 0x08: //backspace
+		//case 0x05: //enq
+		//continue
+		//case 0x07: //bell
+		//TODO handle this properly
+		//continue
+		case 0x8: //backspace
 			t.GetActiveBuffer().backspace()
 			renderRequired = true
-		case 0x09: //tab
+		case 0x9: //tab
 			t.GetActiveBuffer().tab()
 			renderRequired = true
-		case 0x0a, 0x0b, 0x0c: //newLine
+		case 0xa, 0xc: //newLine/form feed
 			t.GetActiveBuffer().newLine()
 			renderRequired = true
-		case 0x0d: //carriageReturn
+		case 0xb: //vertical tab
+			t.GetActiveBuffer().verticalTab()
+			renderRequired = true
+		case 0xd: //carriageReturn
 			t.GetActiveBuffer().carriageReturn()
 			renderRequired = true
-		case 0x0e: //shiftOut
+		case 0xe: //shiftOut
 			t.GetActiveBuffer().currentCharset = 1
-		case 0x0f: //shiftIn
+		case 0xf: //shiftIn
 			t.GetActiveBuffer().currentCharset = 0
 		default:
+			if r.Rune < 0x20 {
+				// TODO handle any other control chars here
+				panic(r.Rune)
+				continue
+			}
+
 			//terminal.logger.Debugf("Received character 0x%X: %q", b, string(b))
 			t.GetActiveBuffer().write(t.translateRune(r))
 			renderRequired = true

@@ -47,24 +47,25 @@ func (m *Multiplexer) render(pane *pane.Pane) {
 
 			targetX, targetY = offsetPosition.Origin.X+x, offsetPosition.Origin.Y+y
 			if localX != targetX || localY != targetY {
-				m.moveCursor(localX, localY)
 				localX, localY = targetX, targetY
+				m.moveCursor(localX, localY)
 			}
 
 			if cell != nil {
 				measuredRune := cell.Rune()
-				// TODO if run + attr are the same as last render, skip this step
+				// TODO if rune + attr are the same as last render, skip this step
 
-				if measuredRune.Rune == 0 {
+				// TODO can we remove this? safely replaces control characters/null bytes with spaces
+				if measuredRune.Rune < 0x20 {
 					measuredRune.Rune = 0x20
 				}
 
 				sgr := cell.Attr().GetDiffANSI(lastCellAttr)
 
-				if measuredRune.Width > 0 {
-					m.writeToStdOut([]byte(sgr + string(measuredRune.Rune)))
-					lastCellAttr = cell.Attr()
-				}
+				//if measuredRune.Width > 0 {
+				m.writeToStdOut([]byte(sgr + string(measuredRune.Rune)))
+				lastCellAttr = cell.Attr()
+				//}
 			} else {
 
 				// TODO reset SGR?
