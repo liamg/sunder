@@ -42,7 +42,7 @@ func (w *Writer) RestoreCursorPosition() {
 	_, _ = fmt.Fprintf(w.writer, "\033[u")
 }
 
-// MoveCursorTo a 1-indexed position
+// MoveCursorTo a 0-indexed position
 func (w *Writer) MoveCursorTo(row, col uint16) {
 	_, _ = fmt.Fprintf(w.writer, "\033[%d;%dH", row+1, col+1)
 }

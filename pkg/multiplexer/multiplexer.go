@@ -19,7 +19,8 @@ import (
 
 type Multiplexer struct {
 	// root pane
-	rootPane pane.Pane
+	rootPane   pane.Pane
+	activePane pane.Pane
 	// write to this to get stdout on the parent terminal
 	output       chan byte
 	stdoutWriter *ansi.Writer
@@ -40,9 +41,11 @@ func New() *Multiplexer {
 
 	terminalPane := pane.NewTerminalPane(update, sunderterm.New(sunderterm.WithLogFile("/tmp/sunder.log")))
 	container := pane.NewContainerPane(update, pane.Horizontal, terminalPane)
+	status := pane.NewStatusPane(update, container, pane.Bottom)
 
 	mp := &Multiplexer{
-		rootPane:     container,
+		rootPane:     status,
+		activePane:   terminalPane,
 		output:       out,
 		updateChan:   update,
 		closeChan:    make(chan struct{}),
@@ -110,7 +113,7 @@ func (m *Multiplexer) Start() error {
 	}
 
 	// kick off root pane
-	m.rootPane.SetActive(m.rootPane)
+	m.rootPane.SetActive(m.activePane)
 	go func() { _ = m.rootPane.Start(size.Rows, size.Cols) }()
 
 	// tidy up root pane on exit
@@ -176,4 +179,10 @@ func (m *Multiplexer) render(target pane.Pane) {
 	}
 
 	m.rootPane.Render(target, 0, 0, m.rows, m.cols, m.stdoutWriter)
+
+	// render active again to fix cursor position etc.
+	active := m.rootPane.FindActive()
+	if active != target {
+		m.rootPane.Render(active, 0, 0, m.rows, m.cols, m.stdoutWriter)
+	}
 }

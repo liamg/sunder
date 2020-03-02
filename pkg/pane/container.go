@@ -15,7 +15,6 @@ type ContainerPane struct {
 	mode       SplitMode
 	children   []Pane
 	updateChan chan<- Pane
-	exists     bool
 	closeChan  chan struct{}
 	closeOnce  sync.Once
 	childWait  sync.WaitGroup
@@ -29,7 +28,6 @@ func NewContainerPane(updateChan chan<- Pane, mode SplitMode, children ...Pane) 
 		children:   children,
 		updateChan: updateChan,
 		closeChan:  make(chan struct{}),
-		exists:     true,
 	}
 }
 
@@ -74,6 +72,8 @@ func (p *ContainerPane) Start(rows, cols uint16) error {
 			p.childWait.Done()
 		}(child, w, h)
 	}
+
+	p.requestRender()
 
 	p.childWait.Wait()
 
@@ -142,7 +142,26 @@ func (p *ContainerPane) Render(target Pane, offsetX, offsetY, rows, cols uint16,
 		childOffsetX, childOffsetY, w, h := p.calculateOffsetPositionForChildN(cols, rows, i)
 		if sendChildAsTarget {
 			target = child
+
+			// only draw border if rendering of whole container requested
+			writer.SetCursorVisible(false)
+			if i < len(p.children)-1 {
+				switch p.mode {
+				case Horizontal:
+					writer.MoveCursorTo(offsetY+childOffsetY+h, offsetX+childOffsetX)
+					for x := uint16(0); x < w; x++ {
+						_, _ = writer.Write([]byte("━"))
+					}
+				case Vertical:
+					for y := uint16(0); y < h; y++ {
+						writer.MoveCursorTo(offsetY+childOffsetY+y, offsetX+childOffsetX+w)
+						_, _ = writer.Write([]byte("┃"))
+					}
+				}
+			}
+			writer.SetCursorVisible(true)
 		}
+
 		child.Render(target, offsetX+childOffsetX, offsetY+childOffsetY, h, w, writer)
 	}
 
@@ -195,7 +214,7 @@ func (p *ContainerPane) calculateOffsetPositionForChildN(cols, rows uint16, chil
 		x = (eachW + 1) * uint16(childN)
 	}
 
-	logger.Log("Offset = %d, %d, Size = %dx%d", x, y, w, h)
+	//logger.Log("Offset = %d, %d, Size = %dx%d", x, y, w, h)
 
 	return
 }

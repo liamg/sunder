@@ -125,23 +125,19 @@ func (p *TerminalPane) Render(target Pane, offsetX, offsetY, rows, cols uint16, 
 
 	w.SetCursorVisible(false)
 
+	// replace mode!
+	_, _ = w.Write([]byte("\x1b[?4l"))
+
 	cursorX += offsetX
 	cursorY += offsetY
 
 	var lastCellAttr terminal.CellAttributes
 
-	localX, localY := cursorX, cursorY
-	var targetX, targetY uint16
-
 	for y := uint16(0); y < rows; y++ {
 		for x := uint16(0); x < cols; x++ {
 			cell := buffer.GetCell(x, y)
 
-			targetX, targetY = offsetX+x, offsetY+y
-			if localX != targetX || localY != targetY {
-				localX, localY = targetX, targetY
-				w.MoveCursorTo(localY, localX)
-			}
+			w.MoveCursorTo(offsetY+y, offsetX+x)
 
 			if cell != nil {
 				measuredRune := cell.Rune()
@@ -160,16 +156,14 @@ func (p *TerminalPane) Render(target Pane, offsetX, offsetY, rows, cols uint16, 
 				lastCellAttr = cell.Attr()
 				//}
 			} else {
-				// TODO reset SGR?
 				lastCellAttr = terminal.CellAttributes{}
 				w.ResetFormatting()
 				_, _ = w.Write([]byte{0x20})
 			}
-			localX++
 		}
 	}
 
-	// only position the cursor for the active pane
+	// only reposition the cursor for the active pane
 	if p.active {
 		// move cursor back
 		//logger.Log("Moving cursor to %d, %d", cursorX, cursorY)
