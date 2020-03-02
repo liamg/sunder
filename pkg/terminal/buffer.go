@@ -502,7 +502,7 @@ func (buffer *Buffer) getNextTabStopAfter(col uint16) uint16 {
 		}
 	}
 
-	if low == 0 || low > defaultStop {
+	if low == 0 {
 		return defaultStop
 	}
 
