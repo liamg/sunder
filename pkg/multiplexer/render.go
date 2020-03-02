@@ -67,8 +67,9 @@ func (m *Multiplexer) render(pane *pane.Pane) {
 				lastCellAttr = cell.Attr()
 				//}
 			} else {
-
 				// TODO reset SGR?
+				lastCellAttr = sunderterm.CellAttributes{}
+				m.writeToStdOut([]byte("\x1b[0m"))
 				m.writeToStdOut([]byte{0x20})
 			}
 			localX++

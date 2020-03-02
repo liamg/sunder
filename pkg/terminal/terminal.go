@@ -173,11 +173,11 @@ func (t *Terminal) processRunes(runes ...MeasuredRune) (renderRequired bool) {
 		t.log("%c 0x%X", r.Rune, r.Rune)
 
 		switch r.Rune {
-		//case 0x05: //enq
-		//continue
-		//case 0x07: //bell
-		//TODO handle this properly
-		//continue
+		case 0x05: //enq
+			continue
+		case 0x07: //bell
+			//TODO handle this properly
+			continue
 		case 0x8: //backspace
 			t.GetActiveBuffer().backspace()
 			renderRequired = true
@@ -200,7 +200,6 @@ func (t *Terminal) processRunes(runes ...MeasuredRune) (renderRequired bool) {
 		default:
 			if r.Rune < 0x20 {
 				// TODO handle any other control chars here
-				panic(r.Rune)
 				continue
 			}
 
