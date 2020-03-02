@@ -28,6 +28,8 @@ type Multiplexer struct {
 	closeOnce  sync.Once
 	rows       uint16
 	cols       uint16
+	renderLock sync.Mutex
+	paneLock   sync.Mutex
 }
 
 func New() *Multiplexer {
@@ -48,6 +50,8 @@ func (m *Multiplexer) writeToStdOut(data []byte) {
 }
 
 func (m *Multiplexer) Start() error {
+
+	m.renderLock.Lock()
 
 	// TODO for debugging, remove later
 	_ = os.Setenv("SUNDER", "1")
@@ -117,7 +121,13 @@ func (m *Multiplexer) Start() error {
 			}
 		}
 	}()
+
+	m.renderLock.Unlock()
 	_, err = io.Copy(os.Stdout, m)
+
+	// reset terminal on exit
+	fmt.Printf("\x1bc")
+
 	return err
 
 }
@@ -146,6 +156,8 @@ func (m *Multiplexer) setCursorVisible(visible bool) {
 }
 
 func (m *Multiplexer) resize(rows uint16, cols uint16) error {
+	m.paneLock.Lock()
+	defer m.paneLock.Unlock()
 	// resize root pane
 	for _, p := range m.panes {
 		if err := p.Resize(rows, cols); err != nil {
@@ -155,4 +167,22 @@ func (m *Multiplexer) resize(rows uint16, cols uint16) error {
 	m.cols = cols
 	m.rows = rows
 	return nil
+}
+
+func (m *Multiplexer) removePane(target *pane.Pane) {
+	m.paneLock.Lock()
+	defer m.paneLock.Unlock()
+	var filtered []*pane.Pane
+	for _, p := range m.panes {
+		if p != target {
+			filtered = append(filtered, p)
+		}
+	}
+	m.panes = filtered
+	if len(m.panes) == 0 {
+		m.Close()
+		return
+	}
+
+	// TODO resize other sibling panes into space left behind by the removed pane
 }

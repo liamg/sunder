@@ -1,17 +1,18 @@
 package multiplexer
 
 import (
-	"fmt"
-
 	"github.com/liamg/sunder/pkg/pane"
 	sunderterm "github.com/liamg/sunder/pkg/terminal"
 )
 
 func (m *Multiplexer) render(pane *pane.Pane) {
 
+	m.renderLock.Lock()
+	defer m.renderLock.Unlock()
+
 	if !pane.Exists() {
 		// TODO remove pane and resize all children
-		fmt.Println("Shell exited.")
+		m.removePane(pane)
 		return
 	}
 
