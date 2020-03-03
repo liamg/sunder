@@ -10,9 +10,11 @@ Sunder aims to be two things:
 ## TODO
 
 - Resize sibling panes when pane is closed
-- Add shortcuts + overlay on ctrl seq press
+- Add shortcuts
+- Add shortcut overlay on ctrl seq press
 - Application key mode per terminal
+- Add tabs
+- Configuration management
 - Status bar configuration a la shox
 - Add attach/detach capability
-- Deprecate shox in favour of this project
 - Create `Show HN` post
