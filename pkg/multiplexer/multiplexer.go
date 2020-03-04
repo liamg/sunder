@@ -25,14 +25,15 @@ type Multiplexer struct {
 	output       chan byte
 	stdoutWriter *ansi.Writer
 	// panes write to this channel to request to be rendered by the multiplexer
-	updateChan <-chan pane.Pane
-	closeChan  chan struct{}
-	closeOnce  sync.Once
-	rows       uint16
-	cols       uint16
-	renderLock sync.Mutex
-	paneLock   sync.Mutex
-	waitGroup sync.WaitGroup
+	updateChan       <-chan pane.Pane
+	closeChan        chan struct{}
+	closeOnce        sync.Once
+	rows             uint16
+	cols             uint16
+	renderLock       sync.Mutex
+	paneLock         sync.Mutex
+	waitGroup        sync.WaitGroup
+	inEscapeSequence bool
 }
 
 func New() *Multiplexer {
@@ -191,11 +192,17 @@ func (m *Multiplexer) render(target pane.Pane) {
 		return
 	}
 
+	//	start := time.Now()
 	m.rootPane.Render(target, 0, 0, m.rows, m.cols, m.stdoutWriter)
+	//	fullRenderDuration := time.Since(start)
+
+	//	logger.Log("Full render: %s", fullRenderDuration)
 
 	// render active again to fix cursor position etc.
 	active := m.rootPane.FindActive()
-	if active != target {
-		m.rootPane.Render(active, 0, 0, m.rows, m.cols, m.stdoutWriter)
-	}
+	//if active != target {
+	m.rootPane.Render(active, 0, 0, m.rows, m.cols, m.stdoutWriter)
+	//	logger.Log("Active: %s", time.Since(start)-fullRenderDuration)
+	//}
+
 }

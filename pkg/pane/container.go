@@ -33,10 +33,12 @@ func NewContainerPane(updateChan chan<- Pane, mode SplitMode, children ...Pane) 
 
 func (p *ContainerPane) SetActive(target Pane) {
 
+	if len(p.children) == 0 {
+		return
+	}
+
 	if p == target {
-		if len(p.children) == 1 {
-			p.children[0].SetActive(p.children[0])
-		}
+		p.children[0].SetActive(p.children[0])
 		return
 	}
 
@@ -68,7 +70,9 @@ func (p *ContainerPane) Start(rows, cols uint16) error {
 		_, _, w, h := p.calculateOffsetPositionForChildN(cols, rows, i)
 		p.childWait.Add(1)
 		go func(c Pane, w, h uint16) {
+			_ = c.Resize(h, w)
 			_ = c.Start(h, w)
+			p.clean()
 			p.childWait.Done()
 		}(child, w, h)
 	}
@@ -81,6 +85,34 @@ func (p *ContainerPane) Start(rows, cols uint16) error {
 	p.Close()
 
 	return nil
+}
+
+func (p *ContainerPane) clean() {
+
+	var setNewActive bool
+
+	// remove inactive children
+	var filtered []Pane
+	for _, p := range p.children {
+		if !p.Exists() {
+			if p.FindActive() != nil {
+				setNewActive = true
+			}
+			continue
+		}
+		filtered = append(filtered, p)
+	}
+
+	if setNewActive {
+		if len(filtered) > 0 {
+			p.SetActive(filtered[len(filtered)-1])
+		}
+	}
+
+	if len(filtered) != len(p.children) {
+		p.children = filtered
+		_ = p.Resize(p.rows, p.cols)
+	}
 }
 
 func (p *ContainerPane) Exists() bool {
@@ -176,15 +208,6 @@ func (p *ContainerPane) Render(target Pane, offsetX, offsetY, rows, cols uint16,
 func (p *ContainerPane) FindActive() Pane {
 	for _, child := range p.children {
 		if active := child.FindActive(); active != nil {
-			if !active.Exists() {
-				for _, candidate := range p.children {
-					if candidate.Exists() {
-						p.SetActive(candidate)
-						return candidate
-					}
-				}
-				return p
-			}
 			return active
 		}
 	}
