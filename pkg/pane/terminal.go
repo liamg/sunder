@@ -4,14 +4,13 @@ import (
 	"sync"
 
 	"github.com/liamg/sunder/pkg/logger"
+	"github.com/liamg/termutil/pkg/termutil"
 
 	"github.com/liamg/sunder/pkg/ansi"
-
-	"github.com/liamg/sunder/pkg/terminal"
 )
 
 type TerminalPane struct {
-	terminal   *terminal.Terminal
+	terminal   *termutil.Terminal
 	updateChan chan<- Pane
 	exists     bool
 	active     bool
@@ -21,7 +20,7 @@ type TerminalPane struct {
 	started    bool
 }
 
-func NewTerminalPane(updateChan chan<- Pane, term *terminal.Terminal) *TerminalPane {
+func NewTerminalPane(updateChan chan<- Pane, term *termutil.Terminal) *TerminalPane {
 	return &TerminalPane{
 		terminal:   term,
 		updateChan: updateChan,
@@ -132,7 +131,7 @@ func (p *TerminalPane) Render(target Pane, offsetX, offsetY, rows, cols uint16, 
 	cursorX += offsetX
 	cursorY += offsetY
 
-	var lastCellAttr terminal.CellAttributes
+	var lastCellAttr termutil.CellAttributes
 
 	for y := uint16(0); y < rows; y++ {
 		for x := uint16(0); x < cols; x++ {
@@ -156,7 +155,7 @@ func (p *TerminalPane) Render(target Pane, offsetX, offsetY, rows, cols uint16, 
 				lastCellAttr = cell.Attr()
 				//}
 			} else {
-				attr := terminal.CellAttributes{}
+				attr := termutil.CellAttributes{}
 				sgr := attr.GetDiffANSI(lastCellAttr)
 				lastCellAttr = attr
 				_, _ = w.Write([]byte(sgr))

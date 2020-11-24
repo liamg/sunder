@@ -6,7 +6,7 @@ import (
 
 	"github.com/liamg/sunder/pkg/logger"
 
-	"github.com/liamg/sunder/pkg/terminal"
+	terminal "github.com/liamg/termutil/pkg/termutil"
 
 	"github.com/liamg/sunder/pkg/ansi"
 )

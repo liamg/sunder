@@ -13,7 +13,7 @@ import (
 	"github.com/liamg/sunder/pkg/pane"
 
 	"github.com/creack/pty"
-	sunderterm "github.com/liamg/sunder/pkg/terminal"
+	"github.com/liamg/termutil/pkg/termutil"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -41,7 +41,7 @@ func New() *Multiplexer {
 	out := make(chan byte, 0xffff)
 	stdoutWriter := NewChanWriter(out)
 
-	terminalPane := pane.NewTerminalPane(update, sunderterm.New(sunderterm.WithLogFile("/tmp/sunder.log")))
+	terminalPane := pane.NewTerminalPane(update, termutil.New(termutil.WithLogFile("/tmp/sunder.log")))
 	container := pane.NewContainerPane(update, pane.Horizontal, terminalPane)
 	status := pane.NewStatusPane(update, container, pane.Bottom)
 
